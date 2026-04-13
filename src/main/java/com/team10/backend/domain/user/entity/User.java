@@ -1,5 +1,6 @@
 package com.team10.backend.domain.user.entity;
 
+import com.team10.backend.domain.user.dto.AuthRegisterRequest;
 import com.team10.backend.domain.user.enums.Role;
 import com.team10.backend.domain.user.enums.UserStatus;
 import com.team10.backend.global.entity.BaseEntity;
@@ -8,6 +9,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -15,6 +18,8 @@ import lombok.NoArgsConstructor;
 @Getter
 @Table(name = "users")
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class User extends BaseEntity {
 
     @Column(name = "image_url")
@@ -45,5 +50,19 @@ public class User extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
+
+    public static User create(AuthRegisterRequest request) {
+        return User.builder()
+                .imageUrl(request.imageUrl())
+                .email(request.email())
+                .password(request.password())
+                .name(request.name())
+                .nickname(request.nickname())
+                .phoneNumber(request.phoneNumber())
+                .address(request.address())
+                .userStatus(UserStatus.ACTIVE)
+                .role(Role.USER)
+                .build();
+    }
 
 }
