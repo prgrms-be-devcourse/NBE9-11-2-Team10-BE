@@ -1,3 +1,10 @@
 spring:
   application:
-    name: NBE9-11-2-Team10
+    name: backend
+
+  profiles:
+    active: dev
+
+springdoc:
+  api-docs:
+    enabled: false
