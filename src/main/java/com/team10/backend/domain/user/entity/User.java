@@ -51,11 +51,11 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private Role role;
 
-    public static User create(AuthRegisterRequest request) {
+    public static User create(AuthRegisterRequest request, String hashedPassword) {
         return User.builder()
                 .imageUrl(request.imageUrl())
                 .email(request.email())
-                .password(request.password())
+                .password(hashedPassword)
                 .name(request.name())
                 .nickname(request.nickname())
                 .phoneNumber(request.phoneNumber())
