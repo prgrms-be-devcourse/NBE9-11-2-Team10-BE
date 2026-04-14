@@ -2,7 +2,9 @@ package com.team10.backend.domain.user.service;
 
 import com.team10.backend.domain.user.dto.AuthRegisterRequest;
 import com.team10.backend.domain.user.dto.AuthRegisterResponse;
+import com.team10.backend.domain.user.dto.DuplicateCheckResponse;
 import com.team10.backend.domain.user.entity.User;
+import com.team10.backend.domain.user.enums.DuplicateType;
 import com.team10.backend.domain.user.repository.AuthRepository;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
@@ -35,6 +37,15 @@ public class AuthService {
         if(authRepository.existsByNickname(request.nickname())) {
             throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public DuplicateCheckResponse checkDuplicate(DuplicateType type, String value) {
+        boolean available = switch (type) {
+            case EMAIL -> !authRepository.existsByEmail(value);
+            case NICKNAME -> !authRepository.existsByNickname(value);
+        };
+        return new DuplicateCheckResponse(type, value, available);
     }
 
 }
