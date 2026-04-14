@@ -7,6 +7,7 @@ import com.team10.backend.domain.user.repository.AuthRepository;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,14 +16,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private final AuthRepository authRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public AuthRegisterResponse register(AuthRegisterRequest request) {
         validateDuplicate(request);
 
-        // TODO: 비밀번호 암호화
+        String hashedPassword = passwordEncoder.encode(request.password());
 
-        User savedUser = authRepository.save(User.create(request));
+        User savedUser = authRepository.save(User.create(request, hashedPassword));
         return AuthRegisterResponse.from(savedUser);
     }
 
