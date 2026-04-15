@@ -53,7 +53,6 @@ public class User extends BaseEntity {
 
     public static User create(AuthRegisterRequest request, String hashedPassword) {
         return User.builder()
-                .imageUrl(request.imageUrl())
                 .email(request.email())
                 .password(hashedPassword)
                 .name(request.name())
