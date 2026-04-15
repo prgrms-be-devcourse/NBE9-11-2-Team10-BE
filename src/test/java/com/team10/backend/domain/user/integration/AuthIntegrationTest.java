@@ -106,7 +106,7 @@ class AuthIntegrationTest {
                 .andDo(print());
 
         resultActions
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isConflict());
     }
 
     @Test
@@ -148,7 +148,7 @@ class AuthIntegrationTest {
                 .andDo(print());
 
         resultActions
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isConflict());
     }
 
     @Test
