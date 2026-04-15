@@ -8,6 +8,7 @@ import com.team10.backend.domain.user.service.AuthService;
 import com.team10.backend.global.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +31,7 @@ public class AuthController {
 
     @PostMapping("/register")
     @Operation(summary = "회원가입", description = "사용자 회원가입을 진행합니다.")
-    public ApiResponse<AuthRegisterResponse> register(@RequestBody AuthRegisterRequest request) {
+    public ApiResponse<AuthRegisterResponse> register(@RequestBody @Valid AuthRegisterRequest request) {
         AuthRegisterResponse response = authService.register(request);
         return ApiResponse.ok(response);
     }
