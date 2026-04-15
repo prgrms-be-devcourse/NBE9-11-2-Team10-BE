@@ -2,9 +2,9 @@ name: Java CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop, feat/* ]
+    branches: [ main, dev, feat/* ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, dev]
 
 jobs:
   build:
