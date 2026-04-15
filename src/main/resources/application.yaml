@@ -5,6 +5,10 @@ spring:
   profiles:
     active: dev
 
+  mvc:
+    problemdetails:
+      enabled: true
+
 springdoc:
   api-docs:
     enabled: false
