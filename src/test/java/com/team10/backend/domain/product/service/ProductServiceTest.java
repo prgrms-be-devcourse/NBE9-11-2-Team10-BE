@@ -1,7 +1,9 @@
 package com.team10.backend.domain.product.service;
 
 import com.team10.backend.domain.product.dto.ProductCreateRequest;
+import com.team10.backend.domain.product.dto.ProductPageResponse;
 import com.team10.backend.domain.product.dto.ProductResponse;
+import com.team10.backend.domain.product.entity.Product;
 import com.team10.backend.domain.product.enums.ProductStatus;
 import com.team10.backend.domain.product.enums.ProductType;
 import com.team10.backend.domain.product.repository.ProductRepository;
@@ -73,5 +75,76 @@ class ProductServiceTest {
         assertThat(response.imageUrl()).isNull();
         assertThat(response.status()).isEqualTo(ProductStatus.SELLING);
         assertThat(productRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("상품 전체 조회 시, 상품 목록과 페이지 정보 반환")
+    void listProducts_withPaging() {
+        User user = userRepository.findById(1L).orElseThrow();
+
+        productRepository.save(new Product(user, ProductType.BOOK, "책1", "설명1", 10000, 10, null));
+        productRepository.save(new Product(user, ProductType.BOOK, "책2", "설명2", 20000, 20, null));
+
+        ProductPageResponse response = productService.list(0, 10, null, null);
+
+        assertThat(response.content()).hasSize(2);
+        assertThat(response.page()).isEqualTo(0);
+        assertThat(response.size()).isEqualTo(10);
+        assertThat(response.totalElements()).isEqualTo(2);
+        assertThat(response.totalPages()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("상품 전체 조회 시, type 필터로 상품 조회")
+    void listProducts_withTypeFilter() {
+        User user = userRepository.findById(1L).orElseThrow();
+
+        productRepository.save(new Product(user, ProductType.BOOK, "책1", "설명1", 10000, 10, null));
+        productRepository.save(new Product(user, ProductType.EBOOK, "굿즈1", "설명2", 20000, 20, null));
+
+        ProductPageResponse response = productService.list(0, 10, ProductType.BOOK, null);
+
+        assertThat(response.content()).hasSize(1);
+        assertThat(response.content().get(0).productName()).isEqualTo("책1");
+        assertThat(response.content().get(0).type()).isEqualTo(ProductType.BOOK);
+    }
+
+    @Test
+    @DisplayName("상품 전체 조회 시, status 필터로 상품 조회")
+    void listProducts_withStatusFilter() {
+        User user = userRepository.findById(1L).orElseThrow();
+
+        productRepository.save(new Product(user, ProductType.BOOK, "책1", "설명1", 10000, 10, null));
+
+        Product inactiveProduct = new Product(user, ProductType.EBOOK, "전자책1", "설명2", 20000, 20, null);
+        inactiveProduct.updateStatus(ProductStatus.INACTIVE);
+        productRepository.save(inactiveProduct);
+
+        ProductPageResponse response = productService.list(0, 10, null, ProductStatus.SELLING);
+
+        assertThat(response.content()).hasSize(1);
+        assertThat(response.content().get(0).productName()).isEqualTo("책1");
+        assertThat(response.content().get(0).status()).isEqualTo(ProductStatus.SELLING);
+    }
+
+    @Test
+    @DisplayName("상품 전체 조회 시, type과 status 필터로 상품 조회")
+    void listProducts_withTypeAndStatusFilter() {
+        User user = userRepository.findById(1L).orElseThrow();
+
+        productRepository.save(new Product(user, ProductType.BOOK, "책1", "설명1", 10000, 10, null));
+
+        Product inactiveBook = new Product(user, ProductType.BOOK, "책2", "설명2", 15000, 5, null);
+        inactiveBook.updateStatus(ProductStatus.INACTIVE);
+        productRepository.save(inactiveBook);
+
+        productRepository.save(new Product(user, ProductType.EBOOK, "전자책1", "설명3", 20000, 20, null));
+
+        ProductPageResponse response = productService.list(0, 10, ProductType.BOOK, ProductStatus.SELLING);
+
+        assertThat(response.content()).hasSize(1);
+        assertThat(response.content().get(0).productName()).isEqualTo("책1");
+        assertThat(response.content().get(0).type()).isEqualTo(ProductType.BOOK);
+        assertThat(response.content().get(0).status()).isEqualTo(ProductStatus.SELLING);
     }
 }

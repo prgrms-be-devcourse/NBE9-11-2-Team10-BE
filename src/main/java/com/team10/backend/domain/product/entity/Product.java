@@ -50,7 +50,6 @@ public class Product extends BaseEntity {
     private ProductStatus status;
 
 
-
     public Product(User user, ProductType type, String productName, String description, int price, int stock, String imageUrl) {
         this.user = user;
         this.type = type;
@@ -60,5 +59,9 @@ public class Product extends BaseEntity {
         this.stock = stock;
         this.imageUrl = imageUrl;
         this.status = ProductStatus.SELLING;
+    }
+
+    public void updateStatus(ProductStatus status) {
+        this.status = status;
     }
 }
