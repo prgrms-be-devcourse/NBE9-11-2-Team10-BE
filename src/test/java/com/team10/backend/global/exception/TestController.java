@@ -7,9 +7,12 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @Component
 @RestController
@@ -23,6 +26,30 @@ public class TestController {
 
     @PostMapping(value = "/valid", consumes = MediaType.APPLICATION_JSON_VALUE)
     public void valid(@Valid @RequestBody TestDto dto) {}  // ✅ Spring @RequestBody 사용
+
+    @GetMapping("/param-type")
+    public void typeMismatch(@RequestParam Integer id) {}
+
+    @GetMapping("/param-missing")
+    public void missingParam(@RequestParam String name) {}
+
+    @GetMapping("/validated")
+    public void constraintViolation(@RequestParam @NotBlank String code) {}
+
+    @GetMapping("/not-found-test")
+    public void notFoundTest() {}  // 존재하지 않는 경로는 별도로 테스트
+
+    @PostMapping("/method-test")
+    public void methodTest() {}  // GET 으로 호출 시 405 테스트용
+
+    @PostMapping(value = "/media-type-test", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public void mediaTypeTest(@RequestBody Map<String, Object> body) {}  // wrong Content-Type 테스트용
+
+    @GetMapping("/db-violation")
+    public void dbViolation() {
+        // 실제 DB 에러 시뮬레이션
+        throw new DataIntegrityViolationException("Duplicate entry for key 'email'");
+    }
 
     @Getter
     @Setter
