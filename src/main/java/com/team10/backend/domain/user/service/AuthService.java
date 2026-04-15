@@ -22,15 +22,17 @@ public class AuthService {
 
     @Transactional
     public AuthRegisterResponse register(AuthRegisterRequest request) {
-        validateDuplicate(request);
+        validateDuplicateUser(request);
 
-        String hashedPassword = passwordEncoder.encode(request.password());
+        String encodedPassword = passwordEncoder.encode(request.password());
 
-        User savedUser = authRepository.save(User.create(request, hashedPassword));
+        User user = User.create(request, encodedPassword);
+        User savedUser = authRepository.save(user);
+
         return AuthRegisterResponse.from(savedUser);
     }
 
-    private void validateDuplicate(AuthRegisterRequest request) {
+    private void validateDuplicateUser(AuthRegisterRequest request) {
         if(authRepository.existsByEmail(request.email())) {
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
