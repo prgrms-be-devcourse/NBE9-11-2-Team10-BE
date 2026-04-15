@@ -1,6 +1,7 @@
 package com.team10.backend.domain.product.service;
 
-import com.team10.backend.domain.product.entity.Product;
+import com.team10.backend.domain.product.dto.ProductCreateRequest;
+import com.team10.backend.domain.product.dto.ProductResponse;
 import com.team10.backend.domain.product.enums.ProductStatus;
 import com.team10.backend.domain.product.enums.ProductType;
 import com.team10.backend.domain.product.repository.ProductRepository;
@@ -60,15 +61,15 @@ class ProductServiceTest {
     void createProduct_defaultStatusSelling() {
         User user = userRepository.findById(1L).orElseThrow();
 
-        Product product = productService.create(user, "ABC", 10000, 100, ProductType.BOOK);
+        ProductCreateRequest request = new ProductCreateRequest("ABC", 10000, 100, ProductType.BOOK);
+        ProductResponse response = productService.create(user, request);
 
-        assertThat(product.getId()).isNotNull();
-        assertThat(product.getProductName()).isEqualTo("ABC");
-        assertThat(product.getPrice()).isEqualTo(10000);
-        assertThat(product.getStock()).isEqualTo(100);
-        assertThat(product.getType()).isEqualTo(ProductType.BOOK);
-        assertThat(product.getStatus()).isEqualTo(ProductStatus.SELLING);
-        assertThat(product.getUser().getId()).isEqualTo(1L);
+        assertThat(response.productId()).isNotNull();
+        assertThat(response.productName()).isEqualTo("ABC");
+        assertThat(response.price()).isEqualTo(10000);
+        assertThat(response.stock()).isEqualTo(100);
+        assertThat(response.type()).isEqualTo(ProductType.BOOK);
+        assertThat(response.status()).isEqualTo(ProductStatus.SELLING);
         assertThat(productRepository.count()).isEqualTo(1);
     }
 }

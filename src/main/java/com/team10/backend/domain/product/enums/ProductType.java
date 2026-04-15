@@ -7,10 +7,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum ProductType {
 
-    BOOK("책", ""),
-    EBOOK("전자책", "")
-    ;
+    BOOK("책"),
+    EBOOK("전자책");
 
     private final String title;
-    private final String description;
 }
