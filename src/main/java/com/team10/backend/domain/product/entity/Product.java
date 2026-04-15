@@ -36,9 +36,6 @@ public class Product extends BaseEntity {
     @Column(nullable = false)
     private int price;
 
-    @Column
-    private int discount;
-
     @Column(nullable = false)
     private int stock;
 
@@ -46,4 +43,12 @@ public class Product extends BaseEntity {
     @Column(nullable = false)
     private ProductStatus status;
 
+    public Product(User user, ProductType type, String productName, int price, int stock) {
+        this.user = user;
+        this.type = type;
+        this.productName = productName;
+        this.price = price;
+        this.stock = stock;
+        this.status = ProductStatus.SELLING;
+    }
 }
