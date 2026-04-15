@@ -61,7 +61,7 @@ public class User extends BaseEntity {
                 .phoneNumber(request.phoneNumber())
                 .address(request.address())
                 .userStatus(UserStatus.ACTIVE)
-                .role(Role.USER)
+                .role(request.role())
                 .build();
     }
 
