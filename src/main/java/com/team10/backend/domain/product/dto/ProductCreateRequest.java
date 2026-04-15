@@ -4,8 +4,10 @@ import com.team10.backend.domain.product.enums.ProductType;
 
 public record ProductCreateRequest(
         String productName,
+        String description,
         int price,
         int stock,
+        String imageUrl,
         ProductType type
 ) {
 }

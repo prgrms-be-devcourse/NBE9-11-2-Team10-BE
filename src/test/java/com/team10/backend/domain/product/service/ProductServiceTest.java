@@ -61,14 +61,16 @@ class ProductServiceTest {
     void createProduct_defaultStatusSelling() {
         User user = userRepository.findById(1L).orElseThrow();
 
-        ProductCreateRequest request = new ProductCreateRequest("ABC", 10000, 100, ProductType.BOOK);
+        ProductCreateRequest request = new ProductCreateRequest("ABC", "책 설명입니다.", 10000, 100, null, ProductType.BOOK);
         ProductResponse response = productService.create(user, request);
 
         assertThat(response.productId()).isNotNull();
         assertThat(response.productName()).isEqualTo("ABC");
+        assertThat(response.description()).isEqualTo("책 설명입니다.");
         assertThat(response.price()).isEqualTo(10000);
         assertThat(response.stock()).isEqualTo(100);
         assertThat(response.type()).isEqualTo(ProductType.BOOK);
+        assertThat(response.imageUrl()).isNull();
         assertThat(response.status()).isEqualTo(ProductStatus.SELLING);
         assertThat(productRepository.count()).isEqualTo(1);
     }

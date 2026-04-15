@@ -21,8 +21,10 @@ public class ProductService {
                 user,
                 request.type(),
                 request.productName(),
+                request.description(),
                 request.price(),
-                request.stock()
+                request.stock(),
+                request.imageUrl()
         );
 
         Product savedProduct = productRepository.save(product);
