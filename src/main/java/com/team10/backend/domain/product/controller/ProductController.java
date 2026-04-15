@@ -7,6 +7,8 @@ import com.team10.backend.domain.product.service.ProductService;
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.domain.user.repository.UserRepository;
 import com.team10.backend.global.dto.ApiResponse;
+import com.team10.backend.global.exception.BusinessException;
+import com.team10.backend.global.exception.ErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +34,7 @@ public class ProductController {
             @RequestBody ProductCreateReqBody reqBody
     ) {
         User user = userRepository.findById(1L)
-                .orElseThrow(() -> new RuntimeException("유저가 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         Product product = productService.create(
                 user,
