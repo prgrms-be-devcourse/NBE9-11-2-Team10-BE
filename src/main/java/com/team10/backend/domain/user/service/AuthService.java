@@ -43,6 +43,8 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public DuplicateCheckResponse checkDuplicate(DuplicateType type, String value) {
+        value = value.trim().toLowerCase();
+        System.out.println(value);
         boolean available = switch (type) {
             case EMAIL -> !authRepository.existsByEmail(value);
             case NICKNAME -> !authRepository.existsByNickname(value);
