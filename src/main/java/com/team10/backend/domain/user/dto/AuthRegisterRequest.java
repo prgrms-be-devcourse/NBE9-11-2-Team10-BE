@@ -1,5 +1,7 @@
 package com.team10.backend.domain.user.dto;
 
+import com.team10.backend.domain.user.enums.Role;
+
 public record AuthRegisterRequest(
         String imageUrl,
         String email,
@@ -7,5 +9,6 @@ public record AuthRegisterRequest(
         String name,
         String nickname,
         String phoneNumber,
-        String address
+        String address,
+        Role role
 ) {}
