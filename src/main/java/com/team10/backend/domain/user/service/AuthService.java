@@ -13,6 +13,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import static com.team10.backend.global.exception.ErrorCode.INVALID_INPUT;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -43,8 +45,10 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public DuplicateCheckResponse checkDuplicate(DuplicateType type, String value) {
+        if (value == null || value.isBlank()) {
+            throw new BusinessException(INVALID_INPUT);
+        }
         value = value.trim().toLowerCase();
-        System.out.println(value);
         boolean available = switch (type) {
             case EMAIL -> !authRepository.existsByEmail(value);
             case NICKNAME -> !authRepository.existsByNickname(value);
