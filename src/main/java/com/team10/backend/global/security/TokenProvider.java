@@ -25,7 +25,7 @@ public class TokenProvider {
 
     public String generateToken(Long id, Role role) {
         Date issuedAt = new Date();
-        Date expireDate = new Date(issuedAt.getTime() + expireTime * 1000 * 60);
+        Date expireDate = calculateExpireDate(issuedAt);
 
         return Jwts.builder()
                 .subject(String.valueOf(id))
@@ -34,6 +34,10 @@ public class TokenProvider {
                 .expiration(expireDate)
                 .signWith(key)
                 .compact();
+    }
+
+    private Date calculateExpireDate(Date issuedAt) {
+        return new Date(issuedAt.getTime() + expireTime * 1000 * 60);
     }
 
 
