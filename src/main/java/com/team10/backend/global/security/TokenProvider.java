@@ -4,23 +4,19 @@ import com.team10.backend.domain.user.enums.Role;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
 
-@Component
 public class TokenProvider {
 
-    @Value("${custom.jwt.expireTime}")
-    private long expireTime;
-
+    private final long expireTime;
     private final SecretKey key;
 
-    public TokenProvider(@Value("${custom.jwt.secretKey}") String secretKey) {
+    public TokenProvider(String secretKey, long expireTime) {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
-        key = Keys.hmacShaKeyFor(keyBytes);
+        this.key = Keys.hmacShaKeyFor(keyBytes);
+        this.expireTime = expireTime;
     }
 
     public String generateToken(Long id, Role role) {
