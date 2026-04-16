@@ -1,14 +1,16 @@
 package com.team10.backend.domain.product.service;
 
 import com.team10.backend.domain.product.dto.ProductCreateRequest;
+import com.team10.backend.domain.product.dto.ProductDetailResponse;
 import com.team10.backend.domain.product.dto.ProductPageResponse;
-import com.team10.backend.domain.product.dto.ProductResponse;
 import com.team10.backend.domain.product.entity.Product;
 import com.team10.backend.domain.product.enums.ProductStatus;
 import com.team10.backend.domain.product.enums.ProductType;
 import com.team10.backend.domain.product.repository.ProductRepository;
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.domain.user.repository.UserRepository;
+import com.team10.backend.global.exception.BusinessException;
+import com.team10.backend.global.exception.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,6 +21,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 @SpringBootTest
 @Transactional
@@ -61,10 +64,9 @@ class ProductServiceTest {
     @Test
     @DisplayName("상품 생성 시 SELLING 상태")
     void createProduct_defaultStatusSelling() {
-        User user = userRepository.findById(1L).orElseThrow();
-
         ProductCreateRequest request = new ProductCreateRequest("ABC", "책 설명입니다.", 10000, 100, null, ProductType.BOOK);
-        ProductResponse response = productService.create(user, request);
+
+        ProductDetailResponse response = productService.create(1L, request);
 
         assertThat(response.productId()).isNotNull();
         assertThat(response.productName()).isEqualTo("ABC");
@@ -146,5 +148,40 @@ class ProductServiceTest {
         assertThat(response.content().get(0).productName()).isEqualTo("책1");
         assertThat(response.content().get(0).type()).isEqualTo(ProductType.BOOK);
         assertThat(response.content().get(0).status()).isEqualTo(ProductStatus.SELLING);
+    }
+
+    @Test
+    @DisplayName("상품 상세 조회 성공")
+    void detail_success() {
+        User user = userRepository.findById(1L).orElseThrow();
+
+        Product savedProduct = productRepository.save(new Product(
+                user,
+                ProductType.BOOK,
+                "ABC",
+                "책 설명입니다.",
+                10000,
+                100,
+                null
+        ));
+
+        ProductDetailResponse response = productService.detail(savedProduct.getId());
+
+        assertThat(response.productId()).isEqualTo(savedProduct.getId());
+        assertThat(response.productName()).isEqualTo("ABC");
+        assertThat(response.description()).isEqualTo("책 설명입니다.");
+        assertThat(response.price()).isEqualTo(10000);
+        assertThat(response.stock()).isEqualTo(100);
+        assertThat(response.type()).isEqualTo(ProductType.BOOK);
+        assertThat(response.imageUrl()).isNull();
+        assertThat(response.status()).isEqualTo(ProductStatus.SELLING);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 상품 상세 조회 시, 예외 발생")
+    void detail_fail_productNotFound() {
+        assertThatThrownBy(() -> productService.detail(9999L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.PRODUCT_NOT_FOUND.getMessage());
     }
 }

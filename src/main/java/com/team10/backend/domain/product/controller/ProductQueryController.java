@@ -1,5 +1,6 @@
 package com.team10.backend.domain.product.controller;
 
+import com.team10.backend.domain.product.dto.ProductDetailResponse;
 import com.team10.backend.domain.product.dto.ProductPageResponse;
 import com.team10.backend.domain.product.enums.ProductStatus;
 import com.team10.backend.domain.product.enums.ProductType;
@@ -9,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,5 +34,11 @@ public class ProductQueryController {
     ) {
         ProductPageResponse response = productService.list(page, size, type, status);
         return ApiResponse.ok(response);
+    }
+
+    @GetMapping("/{productId}")
+    @Operation(summary = "상품 상세 조회", description = "상품 ID로 특정 상품의 상세 정보를 조회합니다.")
+    public ApiResponse<ProductDetailResponse> detail(@PathVariable Long productId) {
+        return ApiResponse.ok(productService.detail(productId));
     }
 }

@@ -1,13 +1,9 @@
 package com.team10.backend.domain.product.controller;
 
 import com.team10.backend.domain.product.dto.ProductCreateRequest;
-import com.team10.backend.domain.product.dto.ProductResponse;
+import com.team10.backend.domain.product.dto.ProductDetailResponse;
 import com.team10.backend.domain.product.service.ProductService;
-import com.team10.backend.domain.user.entity.User;
-import com.team10.backend.domain.user.repository.UserRepository;
 import com.team10.backend.global.dto.ApiResponse;
-import com.team10.backend.global.exception.BusinessException;
-import com.team10.backend.global.exception.ErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -25,19 +21,12 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "상품 관리", description = "상품 등록/수정/삭제 API")
 public class ProductCommandController {
 
-    private final UserRepository userRepository;
     private final ProductService productService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "상품 등록", description = "판매자가 신규 상품을 등록합니다.")
-    public ApiResponse<ProductResponse> create(@RequestBody @Valid ProductCreateRequest request) {
-        User user = userRepository.findById(1L)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        ProductResponse response = productService.create(user, request);
-        return ApiResponse.ok(response);
+    public ApiResponse<ProductDetailResponse> create(@RequestBody @Valid ProductCreateRequest request) {
+        return ApiResponse.ok(productService.create(1L, request));
     }
-
-
 }
