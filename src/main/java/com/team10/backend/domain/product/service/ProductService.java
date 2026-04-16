@@ -2,6 +2,7 @@ package com.team10.backend.domain.product.service;
 
 import com.team10.backend.domain.product.dto.ProductCreateRequest;
 import com.team10.backend.domain.product.dto.ProductDetailResponse;
+import com.team10.backend.domain.product.dto.ProductInactiveResponse;
 import com.team10.backend.domain.product.dto.ProductListResponse;
 import com.team10.backend.domain.product.dto.ProductPageResponse;
 import com.team10.backend.domain.product.dto.ProductUpdateRequest;
@@ -60,8 +61,7 @@ public class ProductService {
         if (type != null && status != null) productPage = productRepository.findByTypeAndStatus(type, status, pageable);
         else if (type != null) productPage = productRepository.findByType(type, pageable);
         else if (status != null) productPage = productRepository.findByStatus(status, pageable);
-        else productPage = productRepository.findAll(pageable);
-
+        else productPage = productRepository.findByStatusNot(ProductStatus.INACTIVE, pageable);
 
         List<ProductListResponse> content = productPage.getContent()
                 .stream()
@@ -81,6 +81,8 @@ public class ProductService {
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        if (product.getStatus() == ProductStatus.INACTIVE) throw new BusinessException(ErrorCode.PRODUCT_NOT_FOUND);
 
         return ProductDetailResponse.from(product);
     }
@@ -103,5 +105,19 @@ public class ProductService {
         );
 
         return ProductDetailResponse.from(product);
+    }
+
+    @Transactional
+    public ProductInactiveResponse inactive(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        if (product.getStatus() == ProductStatus.INACTIVE) {
+            throw new BusinessException(ErrorCode.PRODUCT_ALREADY_INACTIVE);
+        }
+
+        product.updateStatus(ProductStatus.INACTIVE);
+
+        return ProductInactiveResponse.from(product);
     }
 }
