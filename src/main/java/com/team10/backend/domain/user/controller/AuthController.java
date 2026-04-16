@@ -3,6 +3,8 @@ package com.team10.backend.domain.user.controller;
 import com.team10.backend.domain.user.dto.AuthRegisterRequest;
 import com.team10.backend.domain.user.dto.AuthRegisterResponse;
 import com.team10.backend.domain.user.dto.DuplicateCheckResponse;
+import com.team10.backend.domain.user.dto.LoginRequest;
+import com.team10.backend.domain.user.dto.LoginResponse;
 import com.team10.backend.domain.user.enums.DuplicateType;
 import com.team10.backend.domain.user.service.AuthService;
 import com.team10.backend.global.dto.ApiResponse;
@@ -46,5 +48,12 @@ public class AuthController {
         return ApiResponse.ok(response);
     }
 
+    @PostMapping()
+    @Operation(summary = "로그인", description = "사용자 로그인을 진행합니다.")
+    public ApiResponse<LoginResponse> login(@RequestBody @Valid LoginRequest request) {
+        LoginResponse response = authService.login(request);
+
+        return ApiResponse.ok(response);
+    }
 
 }

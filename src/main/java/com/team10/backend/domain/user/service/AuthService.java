@@ -3,6 +3,8 @@ package com.team10.backend.domain.user.service;
 import com.team10.backend.domain.user.dto.AuthRegisterRequest;
 import com.team10.backend.domain.user.dto.AuthRegisterResponse;
 import com.team10.backend.domain.user.dto.DuplicateCheckResponse;
+import com.team10.backend.domain.user.dto.LoginRequest;
+import com.team10.backend.domain.user.dto.LoginResponse;
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.domain.user.enums.DuplicateType;
 import com.team10.backend.domain.user.repository.AuthRepository;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import static com.team10.backend.global.exception.ErrorCode.INVALID_INPUT;
+import static com.team10.backend.global.exception.ErrorCode.LOGIN_FAILED;
 
 @Service
 @RequiredArgsConstructor
@@ -54,6 +57,28 @@ public class AuthService {
             case NICKNAME -> !authRepository.existsByNickname(value);
         };
         return new DuplicateCheckResponse(type, value, available);
+    }
+
+    public LoginResponse login(LoginRequest request) {
+        User user = authenticate(request);
+        generateToken(user);
+
+        return LoginResponse.from(user);
+    }
+
+    private User authenticate(LoginRequest request) {
+        User user = authRepository.findByEmail(request.email())
+                .orElseThrow(() -> new BusinessException(LOGIN_FAILED));
+
+        if(!passwordEncoder.matches(request.password(), user.getPassword())) {
+            throw new BusinessException(LOGIN_FAILED);
+        }
+
+        return user;
+    }
+
+    private void generateToken(User user) {
+        // TODO: 토큰발급
     }
 
 }
