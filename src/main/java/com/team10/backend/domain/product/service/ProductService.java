@@ -45,7 +45,7 @@ public class ProductService {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        Page<Product> productPage = productRepository.findAll(pageable);
+        Page<Product> productPage;
 
         if (type != null && status != null) productPage = productRepository.findByTypeAndStatus(type, status, pageable);
         else if (type != null) productPage = productRepository.findByType(type, pageable);
