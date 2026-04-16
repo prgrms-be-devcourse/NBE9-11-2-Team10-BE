@@ -19,7 +19,10 @@ public enum ErrorCode {
 
     // === 상품 도메인 (3000~3999) ===,
     PRODUCT_NOT_FOUND("PRODUCT_001", "상품을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
-    INSUFFICIENT_STOCK("PRODUCT_002", "재고가 부족합니다.", HttpStatus.BAD_REQUEST);
+    INSUFFICIENT_STOCK("PRODUCT_002", "재고가 부족합니다.", HttpStatus.BAD_REQUEST),
+
+    // === 피드 도메인 (4000~4999) ===
+    FEED_NOT_FOUND("FEED_001", "피드를 찾을 수 없습니다.", HttpStatus.NOT_FOUND);
 
     private final String code;        // 프론트에서 분기용 비즈니스 코드
     private final String message;     // 기본 메시지 (상세 설명은 동적 생성 가능)
