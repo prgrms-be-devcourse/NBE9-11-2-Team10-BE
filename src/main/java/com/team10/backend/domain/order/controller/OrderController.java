@@ -48,7 +48,7 @@ public class OrderController {
     @Operation(summary = "유저 주문 상세 내역 조회(판매자, 구매자)", description = "유저(판매자,구매자)가 주문 내역을 상세하게 확인할 수 있습니다.")
     public ApiResponse<OrderDetailResponse> getBuyerOrderDetail(@PathVariable("userId") Long userId,
                                                                 @PathVariable("orderNumber") String orderNumber) {
-        OrderDetailResponse orderDetailResponse = orderService.getBuyerOrderDetail(userId, orderNumber);
+        OrderDetailResponse orderDetailResponse = orderService.getOrderDetail(userId, orderNumber);
         return ApiResponse.ok(orderDetailResponse);
     }
 

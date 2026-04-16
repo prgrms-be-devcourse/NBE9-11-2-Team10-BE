@@ -122,6 +122,10 @@ public class OrderService {
     public SellerOrderListResponse getSellerOrderList(Long sellerId) {
         // 판매자 존재 확인
         User seller = findUser(sellerId);
+        if (seller.getRole() != Role.SELLER) {
+            //구매자 ID일 경우
+            throw new BusinessException(ACCESS_DENIED);
+        }
 
         // 이 판매자가 등록한 상품들이 포함된 '주문 상품(OrderProducts)'들을 가져옴
         // OrderProducts를 통해 Order에 접근하는 방식이 정확합니다.
@@ -136,7 +140,7 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public OrderDetailResponse getBuyerOrderDetail(Long curUserId, String orderNumber) {
+    public OrderDetailResponse getOrderDetail(Long curUserId, String orderNumber) {
 
         // 1. 주문 상세 조회 (없으면 예외 발생)
         Order order = orderRepository.findByOrderNumberWithDetails(orderNumber)

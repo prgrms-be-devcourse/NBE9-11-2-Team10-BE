@@ -23,10 +23,15 @@ public record OrderSummaryResponse(
                 .mapToInt(OrderProducts::getQuantity)
                 .sum();
 
+        String paymentStatus = order.getPayments().stream()
+                .findFirst()
+                .map(payment -> payment.getStatus().name())
+                .orElse("READY"); // 결제 전 상태를 기본값으로 설정
+
         return new OrderSummaryResponse(
                 order.getOrderNumber(),
                 order.getTotalAmount(),
-                order.getPayments().isEmpty() ? "UNKNOWN" : order.getPayments().get(0).getStatus().name(),
+                paymentStatus,
                 representativeName,
                 totalQty,
                 order.getCreatedAt()
