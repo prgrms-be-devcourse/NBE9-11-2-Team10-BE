@@ -5,6 +5,7 @@ import com.team10.backend.domain.user.dto.AuthRegisterResponse;
 import com.team10.backend.domain.user.dto.DuplicateCheckResponse;
 import com.team10.backend.domain.user.dto.LoginRequest;
 import com.team10.backend.domain.user.dto.LoginResponse;
+import com.team10.backend.domain.user.dto.LoginResult;
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.domain.user.enums.DuplicateType;
 import com.team10.backend.domain.user.repository.AuthRepository;
@@ -61,11 +62,12 @@ public class AuthService {
         return new DuplicateCheckResponse(type, value, available);
     }
 
-    public LoginResponse login(LoginRequest request) {
+    public LoginResult login(LoginRequest request) {
         User user = authenticate(request);
         String accessToken = generateToken(user);
 
-        return LoginResponse.from(user);
+        LoginResponse response = LoginResponse.from(user);
+        return new LoginResult(response, accessToken);
     }
 
     private User authenticate(LoginRequest request) {
