@@ -42,7 +42,7 @@ public class OrderServiceTest {
         jdbcTemplate.update(
                 "INSERT INTO users (id, email, password, name, nickname, phone_number, address, user_status, role, created_at, updated_at) " +
                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                1L, "buyer@test.com", "1234", "홍길동", "길동이", "010-1234-5678", "서울시 강남구", "ACTIVE", "USER"
+                1L, "buyer@test.com", "1234", "홍길동", "길동이", "010-1234-5678", "서울시 강남구", "ACTIVE", "BUYER"
         );
 
         // 3. 상품 데이터 삽입 (ID: 101, 102)

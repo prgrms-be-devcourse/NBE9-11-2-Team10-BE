@@ -59,7 +59,7 @@ public class OrderControllerTest {
         // 유저 삽입 (ID: 1)
         jdbcTemplate.update(
                 "INSERT INTO users (id, email, password, name, nickname, phone_number, address, user_status, role, created_at, updated_at) " +
-                        "VALUES (1, 'buyer@test.com', '1234', '홍길동', '길동이', '010-1234-5678', '서울시', 'ACTIVE', 'USER', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                        "VALUES (1, 'buyer@test.com', '1234', '홍길동', '길동이', '010-1234-5678', '서울시', 'ACTIVE', 'BUYER', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
         );
 
         // 상품들 삽입 (각각 가격이 다름)
