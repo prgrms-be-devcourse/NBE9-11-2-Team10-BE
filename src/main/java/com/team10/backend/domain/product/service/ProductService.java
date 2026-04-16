@@ -1,13 +1,17 @@
 package com.team10.backend.domain.product.service;
 
 import com.team10.backend.domain.product.dto.ProductCreateRequest;
+import com.team10.backend.domain.product.dto.ProductDetailResponse;
+import com.team10.backend.domain.product.dto.ProductListResponse;
 import com.team10.backend.domain.product.dto.ProductPageResponse;
-import com.team10.backend.domain.product.dto.ProductResponse;
 import com.team10.backend.domain.product.entity.Product;
 import com.team10.backend.domain.product.enums.ProductStatus;
 import com.team10.backend.domain.product.enums.ProductType;
 import com.team10.backend.domain.product.repository.ProductRepository;
 import com.team10.backend.domain.user.entity.User;
+import com.team10.backend.domain.user.repository.UserRepository;
+import com.team10.backend.global.exception.BusinessException;
+import com.team10.backend.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -22,10 +26,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductService {
 
+    private final UserRepository userRepository;
     private final ProductRepository productRepository;
 
     @Transactional
-    public ProductResponse create(User user, ProductCreateRequest request) {
+    public ProductDetailResponse create(Long userId, ProductCreateRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
         Product product = new Product(
                 user,
                 request.type(),
@@ -37,7 +45,7 @@ public class ProductService {
         );
 
         Product savedProduct = productRepository.save(product);
-        return ProductResponse.from(savedProduct);
+        return ProductDetailResponse.from(savedProduct);
     }
 
     @Transactional(readOnly = true)
@@ -53,9 +61,9 @@ public class ProductService {
         else productPage = productRepository.findAll(pageable);
 
 
-        List<ProductResponse> content = productPage.getContent()
+        List<ProductListResponse> content = productPage.getContent()
                 .stream()
-                .map(ProductResponse::from)
+                .map(ProductListResponse::from)
                 .toList();
 
         return new ProductPageResponse(
@@ -65,5 +73,12 @@ public class ProductService {
                 productPage.getTotalElements(),
                 productPage.getTotalPages()
         );
+    }
+
+    public ProductDetailResponse detail(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        return ProductDetailResponse.from(product);
     }
 }
