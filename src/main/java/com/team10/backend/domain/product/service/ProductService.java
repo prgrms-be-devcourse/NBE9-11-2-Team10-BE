@@ -4,6 +4,7 @@ import com.team10.backend.domain.product.dto.ProductCreateRequest;
 import com.team10.backend.domain.product.dto.ProductDetailResponse;
 import com.team10.backend.domain.product.dto.ProductListResponse;
 import com.team10.backend.domain.product.dto.ProductPageResponse;
+import com.team10.backend.domain.product.dto.ProductUpdateRequest;
 import com.team10.backend.domain.product.entity.Product;
 import com.team10.backend.domain.product.enums.ProductStatus;
 import com.team10.backend.domain.product.enums.ProductType;
@@ -31,6 +32,7 @@ public class ProductService {
 
     @Transactional
     public ProductDetailResponse create(Long userId, ProductCreateRequest request) {
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
@@ -76,8 +78,29 @@ public class ProductService {
     }
 
     public ProductDetailResponse detail(Long productId) {
+
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        return ProductDetailResponse.from(product);
+    }
+
+    @Transactional
+    public ProductDetailResponse update(Long productId, ProductUpdateRequest request) {
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        // TODO: 인증/인가 적용 후 판매자 권한 및 본인 상품 여부 검증 추가
+        product.update(
+                request.type(),
+                request.productName(),
+                request.description(),
+                request.price(),
+                request.stock(),
+                request.imageUrl(),
+                request.status()
+        );
 
         return ProductDetailResponse.from(product);
     }

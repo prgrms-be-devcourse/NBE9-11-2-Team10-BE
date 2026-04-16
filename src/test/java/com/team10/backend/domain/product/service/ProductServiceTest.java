@@ -3,6 +3,7 @@ package com.team10.backend.domain.product.service;
 import com.team10.backend.domain.product.dto.ProductCreateRequest;
 import com.team10.backend.domain.product.dto.ProductDetailResponse;
 import com.team10.backend.domain.product.dto.ProductPageResponse;
+import com.team10.backend.domain.product.dto.ProductUpdateRequest;
 import com.team10.backend.domain.product.entity.Product;
 import com.team10.backend.domain.product.enums.ProductStatus;
 import com.team10.backend.domain.product.enums.ProductType;
@@ -181,6 +182,61 @@ class ProductServiceTest {
     @DisplayName("존재하지 않는 상품 상세 조회 시, 예외 발생")
     void detail_fail_productNotFound() {
         assertThatThrownBy(() -> productService.detail(9999L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.PRODUCT_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("상품 수정 성공")
+    void updateProduct_success() {
+        User user = userRepository.findById(1L).orElseThrow();
+
+        Product savedProduct = productRepository.save(new Product(
+                user,
+                ProductType.BOOK,
+                "기존 상품명",
+                "기존 설명",
+                10000,
+                10,
+                "https://example.com/old.jpg"
+        ));
+
+        ProductUpdateRequest request = new ProductUpdateRequest(
+                "수정된 상품명",
+                "수정된 설명",
+                12000,
+                20,
+                "https://example.com/new.jpg",
+                ProductType.EBOOK,
+                ProductStatus.SOLD_OUT
+        );
+
+        ProductDetailResponse response = productService.update(savedProduct.getId(), request);
+
+        assertThat(response.productId()).isEqualTo(savedProduct.getId());
+        assertThat(response.productName()).isEqualTo("수정된 상품명");
+        assertThat(response.description()).isEqualTo("수정된 설명");
+        assertThat(response.price()).isEqualTo(12000);
+        assertThat(response.stock()).isEqualTo(20);
+        assertThat(response.imageUrl()).isEqualTo("https://example.com/new.jpg");
+        assertThat(response.type()).isEqualTo(ProductType.EBOOK);
+        assertThat(response.status()).isEqualTo(ProductStatus.SOLD_OUT);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 상품 수정 시, 예외 발생")
+    void updateProduct_fail_productNotFound() {
+        ProductUpdateRequest request = new ProductUpdateRequest(
+                "수정된 상품명",
+                "수정된 설명",
+                12000,
+                20,
+                "https://example.com/new.jpg",
+                ProductType.BOOK,
+                ProductStatus.SELLING
+        );
+
+        assertThatThrownBy(() -> productService.update(9999L, request))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.PRODUCT_NOT_FOUND.getMessage());
     }
