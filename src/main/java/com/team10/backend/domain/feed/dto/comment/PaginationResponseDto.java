@@ -1,6 +1,6 @@
 package com.team10.backend.domain.feed.dto.comment;
 
-public record PaginationResponse(
+public record PaginationResponseDto(
         int currentPage,
         int totalPages,
         long totalElements
