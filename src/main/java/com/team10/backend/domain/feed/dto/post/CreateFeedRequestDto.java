@@ -1,4 +1,4 @@
-package com.team10.backend.domain.feed.dto;
+package com.team10.backend.domain.feed.dto.post;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
