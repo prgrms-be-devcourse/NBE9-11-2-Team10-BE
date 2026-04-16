@@ -11,8 +11,6 @@ import org.junit.jupiter.api.Test;
 
 import javax.crypto.SecretKey;
 
-import java.util.Base64;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -24,9 +22,7 @@ public class TokenProviderTest {
 
     @BeforeEach
     void setUp() {
-        String raw = "thisissecretkeythisissecretkey123456";
-        String secretKey = Base64.getEncoder()
-                .encodeToString(raw.getBytes());
+        String secretKey = "RjnNJn0bpT1nvG1AgH2vbTOvkB1iMzlX3+Evusj2n/U=";
         long expireTime = 1;
 
         tokenProvider = new TokenProvider(secretKey, expireTime);
