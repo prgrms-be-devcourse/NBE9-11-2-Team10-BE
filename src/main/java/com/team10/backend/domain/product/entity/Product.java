@@ -64,4 +64,22 @@ public class Product extends BaseEntity {
     public void updateStatus(ProductStatus status) {
         this.status = status;
     }
+
+    public void update(
+            ProductType type,
+            String productName,
+            String description,
+            int price,
+            int stock,
+            String imageUrl,
+            ProductStatus status
+    ) {
+        this.type = type;
+        this.productName = productName;
+        this.description = description;
+        this.price = price;
+        this.stock = stock;
+        this.imageUrl = imageUrl;
+        this.status = status;
+    }
 }
