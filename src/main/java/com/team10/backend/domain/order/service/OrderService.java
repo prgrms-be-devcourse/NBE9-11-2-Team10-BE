@@ -7,7 +7,9 @@ import com.team10.backend.domain.order.entity.OrderDelivery;
 import com.team10.backend.domain.order.entity.OrderProducts;
 import com.team10.backend.domain.order.repository.OrderRepository;
 import com.team10.backend.domain.product.entity.Product;
+import com.team10.backend.domain.product.repository.ProductRepository;
 import com.team10.backend.domain.user.entity.User;
+import com.team10.backend.domain.user.repository.UserRepository;
 import com.team10.backend.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -60,14 +62,14 @@ public class OrderService {
 
     //유저 찾기
     public User findUser(OrderCreateRequest request) {
-        return userRepository.findById(request.user_id())
+        return userRepository.findById(request.userId())
                 .orElseThrow(() ->new BusinessException(USER_NOT_FOUND,"해당 유저 정보를 찾을 수 없습니다."));
     }
 
     //order-delivery 테이블에 배송지, 운송장 번호 생성
     public OrderDelivery deliveryInfo(OrderCreateRequest request) {
         return  OrderDelivery.builder()
-                .delivery_address(request.delivery_address())
+                .delivery_address(request.deliveryAddress())
                 .tracking_number(null) // 송장 번호를 여기서 만들어야 하나?
                 .build();
     }
