@@ -3,6 +3,8 @@ package com.team10.backend.domain.user.unit;
 import com.team10.backend.domain.user.dto.AuthRegisterRequest;
 import com.team10.backend.domain.user.dto.AuthRegisterResponse;
 import com.team10.backend.domain.user.dto.DuplicateCheckResponse;
+import com.team10.backend.domain.user.dto.LoginRequest;
+import com.team10.backend.domain.user.dto.LoginResult;
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.domain.user.enums.DuplicateType;
 import com.team10.backend.domain.user.enums.Role;
@@ -10,6 +12,7 @@ import com.team10.backend.domain.user.repository.AuthRepository;
 import com.team10.backend.domain.user.service.AuthService;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
+import com.team10.backend.global.security.TokenProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,6 +21,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -37,6 +42,9 @@ class AuthServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private TokenProvider tokenProvider;
 
     @InjectMocks
     private AuthService authService;
@@ -162,5 +170,57 @@ class AuthServiceTest {
         // then
         assertFalse(response.available());
     }
+
+    @Test
+    @DisplayName("로그인 성공")
+    void login_success() {
+        // given
+        LoginRequest request = new LoginRequest("user@example.com", "password");
+
+        User user = User.builder()
+                        .email(request.email())
+                        .password("encodedPassword")
+                        .nickname("길동이")
+                        .role(Role.BUYER)
+                        .build();
+
+        given(authRepository.findByEmail(request.email())).willReturn(Optional.of(user));
+        given(passwordEncoder.matches(request.password(), user.getPassword()))
+                            .willReturn(true);
+        given(tokenProvider.generateToken(user.getId(), user.getRole())).willReturn("test-access-token");
+
+        // when
+        LoginResult result = authService.login(request);
+
+        // then
+        assertEquals(user.getEmail(), result.response().email());
+        assertEquals("test-access-token", result.accessToken());
+    }
+
+    @Test
+    @DisplayName("로그인 실패 - 비밀번호 불일치")
+    void login_fail_mismatch_password() {
+        // given
+        LoginRequest request = new LoginRequest("user@example.com", "password");
+
+        User user = User.builder()
+                .email(request.email())
+                .password("encodedPassword")
+                .nickname("길동이")
+                .role(Role.BUYER)
+                .build();
+
+        given(authRepository.findByEmail(request.email())).willReturn(Optional.of(user));
+        given(passwordEncoder.matches(request.password(), user.getPassword())).willReturn(false);
+
+        // when & then
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> authService.login(request));
+
+        assertEquals(ErrorCode.LOGIN_FAILED, ex.getErrorCode());
+
+        then(tokenProvider).should(never()).generateToken(any(), any());
+    }
+
 
 }

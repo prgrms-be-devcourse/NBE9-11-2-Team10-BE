@@ -4,7 +4,7 @@ import com.team10.backend.domain.product.entity.Product;
 import com.team10.backend.domain.product.enums.ProductStatus;
 import com.team10.backend.domain.product.enums.ProductType;
 
-public record ProductResponse(
+public record ProductDetailResponse(
         Long productId,
         String productName,
         String description,
@@ -14,8 +14,8 @@ public record ProductResponse(
         ProductType type,
         ProductStatus status
 ) {
-    public static ProductResponse from(Product product) {
-        return new ProductResponse(
+    public static ProductDetailResponse from(Product product) {
+        return new ProductDetailResponse(
                 product.getId(),
                 product.getProductName(),
                 product.getDescription(),

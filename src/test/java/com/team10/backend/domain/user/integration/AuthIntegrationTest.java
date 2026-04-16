@@ -2,6 +2,7 @@ package com.team10.backend.domain.user.integration;
 
 import com.team10.backend.domain.user.controller.AuthController;
 import com.team10.backend.domain.user.dto.AuthRegisterRequest;
+import com.team10.backend.domain.user.dto.LoginRequest;
 import com.team10.backend.domain.user.enums.Role;
 import com.team10.backend.domain.user.repository.AuthRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -10,19 +11,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.handler;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
+@ActiveProfiles("test")
 @AutoConfigureMockMvc
 @Transactional
 class AuthIntegrationTest {
@@ -238,6 +242,76 @@ class AuthIntegrationTest {
                 )
                 .andDo(print())
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("로그인 성공")
+    void login_success() throws Exception {
+        // given
+        AuthRegisterRequest registerRequest = new AuthRegisterRequest(
+                "user@example.com",
+                "SecurePass123!",
+                "홍길동",
+                "길동이",
+                "010-1111-2222",
+                "서울",
+                Role.BUYER
+        );
+
+        mvc.perform(post("/api/v1/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(registerRequest)));
+
+        // when
+        LoginRequest loginRequest = new LoginRequest(
+                "user@example.com",
+                "SecurePass123!"
+        );
+
+        ResultActions result = mvc.perform(
+                post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest))
+        ).andDo(print());
+
+        // then
+        result.andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.email").value("user@example.com"))
+                .andExpect(cookie().exists("accessToken"));
+    }
+
+    @Test
+    @DisplayName("로그인 실패 - 비밀번호 오류")
+    void login_fail_wrong_password() throws Exception {
+        // given
+        AuthRegisterRequest registerRequest = new AuthRegisterRequest(
+                "user@example.com",
+                "SecurePass123!",
+                "홍길동",
+                "길동이",
+                "010-1111-2222",
+                "서울",
+                Role.BUYER
+        );
+
+        mvc.perform(post("/api/v1/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(registerRequest)));
+
+        // when
+        LoginRequest loginRequest = new LoginRequest(
+                "user@example.com",
+                "wrong-password"
+        );
+
+        ResultActions result = mvc.perform(
+                post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest))
+        ).andDo(print());
+
+        // then
+        result.andExpect(status().isBadRequest());
     }
 
 }
