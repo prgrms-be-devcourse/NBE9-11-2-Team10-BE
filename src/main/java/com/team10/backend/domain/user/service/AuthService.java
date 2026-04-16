@@ -10,6 +10,7 @@ import com.team10.backend.domain.user.enums.DuplicateType;
 import com.team10.backend.domain.user.repository.AuthRepository;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
+import com.team10.backend.global.security.TokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class AuthService {
 
     private final AuthRepository authRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TokenProvider tokenProvider;
 
     @Transactional
     public AuthRegisterResponse register(AuthRegisterRequest request) {
@@ -61,7 +63,7 @@ public class AuthService {
 
     public LoginResponse login(LoginRequest request) {
         User user = authenticate(request);
-        generateToken(user);
+        String accessToken = generateToken(user);
 
         return LoginResponse.from(user);
     }
@@ -77,8 +79,8 @@ public class AuthService {
         return user;
     }
 
-    private void generateToken(User user) {
-        // TODO: 토큰발급
+    private String generateToken(User user) {
+        return tokenProvider.generateToken(user.getId(), user.getRole());
     }
 
 }
