@@ -155,7 +155,7 @@ public class OrderService {
         if (user.getRole() == Role.BUYER) {
             // 구매자라면: 주문서의 주인인지 확인
             if (!order.getUser().getId().equals(curUserId)) {
-                throw new BusinessException(ACCESS_DENIED, "본인의 주문만 조회할 수 있습니다.");
+                throw new BusinessException(ACCESS_DENIED);
             }
         }else if (user.getRole()  == Role.SELLER) {
             // 판매자라면: order_product 테이블에서 해당 주문 안에 '내 상품'이 하나라도 포함되어 있는지 확인한다.
@@ -163,7 +163,7 @@ public class OrderService {
                     .anyMatch(op -> op.getProduct().getUser().getId().equals(curUserId));
 
             if (!isSellerOfThisOrder) {
-                throw new BusinessException(ACCESS_DENIED, "해당 주문에 판매한 상품이 존재하지 않습니다.");
+                throw new BusinessException(ACCESS_DENIED);
             }
         }
 
