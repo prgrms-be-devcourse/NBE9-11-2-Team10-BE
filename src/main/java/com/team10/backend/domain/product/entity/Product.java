@@ -70,7 +70,6 @@ public class Product extends BaseEntity {
             String productName,
             String description,
             int price,
-            int stock,
             String imageUrl,
             ProductStatus status
     ) {
@@ -78,8 +77,15 @@ public class Product extends BaseEntity {
         this.productName = productName;
         this.description = description;
         this.price = price;
-        this.stock = stock;
         this.imageUrl = imageUrl;
         this.status = status;
+    }
+
+    public void updateStock(int stock) {
+        this.stock = stock;
+    }
+
+    public void inactivate() {
+        this.status = ProductStatus.INACTIVE;
     }
 }

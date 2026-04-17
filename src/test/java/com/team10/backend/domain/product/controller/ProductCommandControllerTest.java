@@ -1,6 +1,7 @@
 package com.team10.backend.domain.product.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.team10.backend.domain.product.dto.ProductStockRequest;
 import com.team10.backend.domain.product.dto.ProductUpdateRequest;
 import com.team10.backend.domain.product.entity.Product;
 import com.team10.backend.domain.product.enums.ProductStatus;
@@ -119,7 +120,6 @@ class ProductCommandControllerTest {
                 "ABC 수정본",
                 "상품 수정",
                 12000,
-                80,
                 "https://www.exam.com/bookimg",
                 ProductType.BOOK,
                 ProductStatus.SELLING
@@ -134,7 +134,7 @@ class ProductCommandControllerTest {
                 .andExpect(jsonPath("$.data.productName").value("ABC 수정본"))
                 .andExpect(jsonPath("$.data.description").value("상품 수정"))
                 .andExpect(jsonPath("$.data.price").value(12000))
-                .andExpect(jsonPath("$.data.stock").value(80))
+                .andExpect(jsonPath("$.data.stock").value(10))
                 .andExpect(jsonPath("$.data.imageUrl").value("https://www.exam.com/bookimg"))
                 .andExpect(jsonPath("$.data.type").value("BOOK"))
                 .andExpect(jsonPath("$.data.status").value("SELLING"));
@@ -143,7 +143,7 @@ class ProductCommandControllerTest {
         assertThat(product.getProductName()).isEqualTo("ABC 수정본");
         assertThat(product.getDescription()).isEqualTo("상품 수정");
         assertThat(product.getPrice()).isEqualTo(12000);
-        assertThat(product.getStock()).isEqualTo(80);
+        assertThat(product.getStock()).isEqualTo(10);
         assertThat(product.getImageUrl()).isEqualTo("https://www.exam.com/bookimg");
         assertThat(product.getType()).isEqualTo(ProductType.BOOK);
         assertThat(product.getStatus()).isEqualTo(ProductStatus.SELLING);
@@ -200,5 +200,45 @@ class ProductCommandControllerTest {
                 .andExpect(status().isConflict());
     }
 
+    @Test
+    @DisplayName("재고 수정 성공")
+    void updateStock_success() throws Exception {
+        jdbcTemplate.update(
+                "INSERT INTO products " +
+                        "(id, user_id, type, product_name, description, price, stock, image_url, status, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                1L,
+                1L,
+                "BOOK",
+                "기존 상품명",
+                "기존 설명",
+                10000,
+                10,
+                "https://www.exam.com/oldimg",
+                "SELLING"
+        );
 
+        ProductStockRequest request = new ProductStockRequest(30);
+
+        mockMvc.perform(patch("/api/v1/stores/me/products/{productId}/stock", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(new ObjectMapper().writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.productId").value(1))
+                .andExpect(jsonPath("$.data.stock").value(30))
+                .andExpect(jsonPath("$.data.message").value("상품 재고가 수정되었습니다."));
+    }
+
+    @Test
+    @DisplayName("재고를 음수로 수정하면 검증 실패")
+    void updateStock_fail_negativeStock() throws Exception {
+        ProductStockRequest request = new ProductStockRequest(-1);
+
+        mockMvc.perform(patch("/api/v1/stores/me/products/{productId}/stock", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(new ObjectMapper().writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
+    }
 }

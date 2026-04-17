@@ -8,13 +8,16 @@ import com.team10.backend.domain.product.service.ProductService;
 import com.team10.backend.global.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Validated
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/products")
@@ -27,8 +30,8 @@ public class ProductQueryController {
     @Operation(summary = "상품 전체 조회",
             description = "등록된 상품 목록을 최신순으로 조회하며, 페이지 및 필터 조건을 지원합니다.")
     public ApiResponse<ProductPageResponse> list(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "0") @Min(value = 0, message = "page는 0 이상이어야 합니다.") int page,
+            @RequestParam(defaultValue = "10") @Min(value = 1, message = "size는 1 이상이어야 합니다.") int size,
             @RequestParam(required = false) ProductType type,
             @RequestParam(required = false) ProductStatus status
     ) {
