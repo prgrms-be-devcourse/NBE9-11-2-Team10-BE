@@ -12,6 +12,7 @@ import com.team10.backend.global.dto.ApiResponse;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/stores/{sellerId}/feeds/{feedId}/comments")
 @RequiredArgsConstructor
+@Tag(name = "Feed_Comment", description = "피드 댓글 관리 API")
 public class FeedCommentController {
 
     private final FeedCommentService feedCommentService;
