@@ -24,8 +24,9 @@ public enum ErrorCode {
 
     // === 피드 도메인 (4000~4999) ===
     FEED_NOT_FOUND("FEED_001", "피드를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
-    FEED_COMMENT_NOT_FOUND("FEED_COMMENT_001", "피드 댓글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
-    FEED_COMMENT_ACCESS_DENIED("FEED_COMMENT_002", "피드 댓글에 대한 권한이 없습니다.", HttpStatus.FORBIDDEN);
+    COMMENT_NOT_FOUND("FEED_COMMENT_001", "피드 댓글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    COMMENT_ACCESS_DENIED("FEED_COMMENT_002", "피드 댓글에 대한 권한이 없습니다.", HttpStatus.FORBIDDEN);
+
 
     private final String code;        // 프론트에서 분기용 비즈니스 코드
     private final String message;     // 기본 메시지 (상세 설명은 동적 생성 가능)

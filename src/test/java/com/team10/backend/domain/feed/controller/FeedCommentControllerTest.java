@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -120,6 +121,75 @@ public class FeedCommentControllerTest {
                 .andExpect(jsonPath("$.data.comments[0].isMine").value(true))
                 .andExpect(jsonPath("$.data.pagination.currentPage").value(0))
                 .andExpect(jsonPath("$.data.pagination.totalElements").value(1));
+    }
+
+    @Test
+    @DisplayName("피드 댓글 조회 API - 페이징 및 최신순 기본 정렬 성공")
+    void getComments_withPagingAndDefaultSort() throws Exception {
+        jdbcTemplate.update(
+                "INSERT INTO feed_comments (id, feed_post_id, writer_id, content, like_count, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                210L,
+                100L,
+                2L,
+                "오래된 댓글입니다.",
+                0,
+                "2026-01-01 10:00:00",
+                "2026-01-01 10:00:00"
+        );
+
+        jdbcTemplate.update(
+                "INSERT INTO feed_comments (id, feed_post_id, writer_id, content, like_count, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                211L,
+                100L,
+                2L,
+                "최신 댓글입니다.",
+                0,
+                "2026-01-02 10:00:00",
+                "2026-01-02 10:00:00"
+        );
+
+        mockMvc.perform(get("/api/v1/stores/1/feeds/100/comments")
+                        .param("page", "0")
+                        .param("size", "1")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.comments[0].content").value("최신 댓글입니다."))
+                .andExpect(jsonPath("$.data.pagination.currentPage").value(0))
+                .andExpect(jsonPath("$.data.pagination.totalPages").value(2))
+                .andExpect(jsonPath("$.data.pagination.totalElements").value(2));
+    }
+
+    @Test
+    @DisplayName("피드 댓글 수정 API - 성공")
+    void updateComment() throws Exception {
+        jdbcTemplate.update(
+                "INSERT INTO feed_comments (id, feed_post_id, writer_id, content, like_count, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                203L,
+                100L,
+                2L,
+                "댓글 수정 전입니다.",
+                0
+        );
+
+        String requestBody = """
+                {
+                  "content": "댓글 수정 후입니다."
+                }
+                """;
+
+        mockMvc.perform(patch("/api/v1/stores/1/feeds/100/comments/203")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.commentId").value("203"))
+                .andExpect(jsonPath("$.data.content").value("댓글 수정 후입니다."))
+                .andExpect(jsonPath("$.data.writer.userId").value("2"))
+                .andExpect(jsonPath("$.data.isMine").value(true));
     }
 
     @Test

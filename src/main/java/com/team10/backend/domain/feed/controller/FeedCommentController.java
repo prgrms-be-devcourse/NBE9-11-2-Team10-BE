@@ -3,7 +3,8 @@ package com.team10.backend.domain.feed.controller;
 import com.team10.backend.domain.feed.dto.comment.CommentLikeResponseDto;
 import com.team10.backend.domain.feed.dto.comment.CommentListResponseDto;
 import com.team10.backend.domain.feed.dto.comment.CommentResponseDto;
-import com.team10.backend.domain.feed.dto.comment.CreateFeedCommentRequestDto;
+import com.team10.backend.domain.feed.dto.comment.CreateCommentRequestDto;
+import com.team10.backend.domain.feed.dto.comment.UpdateCommentRequestDto;
 import com.team10.backend.domain.feed.service.FeedCommentService;
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.domain.user.repository.UserRepository;
@@ -11,14 +12,17 @@ import com.team10.backend.global.dto.ApiResponse;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -36,7 +40,7 @@ public class FeedCommentController {
     public ApiResponse<CommentResponseDto> createComment(
             @PathVariable Long sellerId,
             @PathVariable Long feedId,
-            @RequestBody CreateFeedCommentRequestDto requestDto
+            @RequestBody @Valid CreateCommentRequestDto requestDto
     ) {
         User currentUser = getTestUser();
         return ApiResponse.ok(feedCommentService.createComment(sellerId, feedId, requestDto, currentUser));
@@ -46,10 +50,25 @@ public class FeedCommentController {
     @Operation(summary = "댓글 조회", description = "피드의 댓글을 조회 합니다.")
     public ApiResponse<CommentListResponseDto> getComments(
             @PathVariable Long sellerId,
-            @PathVariable Long feedId
+            @PathVariable Long feedId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt,desc") String sort
     ) {
         User currentUser = getTestUser();
-        return ApiResponse.ok(feedCommentService.getComments(sellerId, feedId, currentUser));
+        return ApiResponse.ok(feedCommentService.getComments(sellerId, feedId, page, size, sort, currentUser));
+    }
+
+    @PatchMapping("/{commentId}")
+    @Operation(summary = "댓글 수정", description = "피드의 댓글을 수정합니다.")
+    public ApiResponse<CommentResponseDto> updateComment(
+            @PathVariable Long sellerId,
+            @PathVariable Long feedId,
+            @PathVariable Long commentId,
+            @RequestBody @Valid UpdateCommentRequestDto requestDto
+    ){
+        User currentUser = getTestUser();
+        return ApiResponse.ok(feedCommentService.updateComment(sellerId, feedId, commentId, requestDto, currentUser));
     }
 
     @DeleteMapping("/{commentId}")

@@ -3,7 +3,8 @@ package com.team10.backend.domain.feed.service;
 import com.team10.backend.domain.feed.dto.comment.CommentLikeResponseDto;
 import com.team10.backend.domain.feed.dto.comment.CommentListResponseDto;
 import com.team10.backend.domain.feed.dto.comment.CommentResponseDto;
-import com.team10.backend.domain.feed.dto.comment.CreateFeedCommentRequestDto;
+import com.team10.backend.domain.feed.dto.comment.CreateCommentRequestDto;
+import com.team10.backend.domain.feed.dto.comment.UpdateCommentRequestDto;
 import com.team10.backend.domain.feed.repository.FeedCommentLikeRepository;
 import com.team10.backend.domain.feed.repository.FeedCommentRepository;
 import com.team10.backend.domain.feed.repository.FeedPostRepository;
@@ -107,7 +108,7 @@ public class FeedCommentServiceTest {
     @Test
     @DisplayName("피드 댓글 생성 - 성공")
     void createComment_success() {
-        CreateFeedCommentRequestDto request = new CreateFeedCommentRequestDto("댓글 내용입니다.");
+        CreateCommentRequestDto request = new CreateCommentRequestDto("댓글 내용입니다.");
 
         CommentResponseDto result = feedCommentService.createComment(1L, 100L, request, buyer);
         feedCommentRepository.flush();
@@ -147,7 +148,7 @@ public class FeedCommentServiceTest {
                 2L
         );
 
-        CommentListResponseDto result = feedCommentService.getComments(1L, 100L, buyer);
+        CommentListResponseDto result = feedCommentService.getComments(1L, 100L, 0, 20, "createdAt,asc", buyer);
 
         assertThat(result.comments()).hasSize(1);
         assertThat(result.comments().get(0).content()).isEqualTo("조회 댓글입니다.");
@@ -155,6 +156,71 @@ public class FeedCommentServiceTest {
         assertThat(result.comments().get(0).isMine()).isTrue();
         assertThat(result.pagination().currentPage()).isEqualTo(0);
         assertThat(result.pagination().totalElements()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("피드 댓글 수정 - 성공")
+    void updateComment_success() {
+        jdbcTemplate.update(
+                "INSERT INTO feed_comments (id, feed_post_id, writer_id, content, like_count, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                205L,
+                100L,
+                2L,
+                "수정 전 댓글입니다.",
+                1
+        );
+
+        jdbcTemplate.update(
+                "INSERT INTO feed_comment_likes (feed_comment_id, user_id, created_at, updated_at) " +
+                        "VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                205L,
+                2L
+        );
+
+        UpdateCommentRequestDto request = new UpdateCommentRequestDto("수정 후 댓글입니다.");
+
+        CommentResponseDto result = feedCommentService.updateComment(1L, 100L, 205L, request, buyer);
+        feedCommentRepository.flush();
+
+        String updatedContent = jdbcTemplate.queryForObject(
+                "SELECT content FROM feed_comments WHERE id = ?",
+                String.class,
+                205L
+        );
+        Integer likeCount = jdbcTemplate.queryForObject(
+                "SELECT like_count FROM feed_comments WHERE id = ?",
+                Integer.class,
+                205L
+        );
+
+        assertThat(result.commentId()).isEqualTo("205");
+        assertThat(result.content()).isEqualTo("수정 후 댓글입니다.");
+        assertThat(result.writer().userId()).isEqualTo("2");
+        assertThat(result.isLiked()).isTrue();
+        assertThat(result.isMine()).isTrue();
+        assertThat(updatedContent).isEqualTo("수정 후 댓글입니다.");
+        assertThat(likeCount).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("피드 댓글 수정 - 작성자가 아니면 예외 발생")
+    void updateComment_accessDenied() {
+        jdbcTemplate.update(
+                "INSERT INTO feed_comments (id, feed_post_id, writer_id, content, like_count, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                206L,
+                100L,
+                1L,
+                "판매자가 작성한 댓글입니다.",
+                0
+        );
+
+        UpdateCommentRequestDto request = new UpdateCommentRequestDto("수정 시도입니다.");
+
+        assertThatThrownBy(() -> feedCommentService.updateComment(1L, 100L, 206L, request, buyer))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(ErrorCode.COMMENT_ACCESS_DENIED.getMessage());
     }
 
     @Test
@@ -191,6 +257,39 @@ public class FeedCommentServiceTest {
     }
 
     @Test
+    @DisplayName("피드 댓글 삭제 - 피드 소유자이면 성공")
+    void deleteComment_feedOwnerSuccess() {
+        jdbcTemplate.update(
+                "UPDATE feed_posts SET comment_count = ? WHERE id = ?",
+                1,
+                100L
+        );
+
+        jdbcTemplate.update(
+                "INSERT INTO feed_comments (id, feed_post_id, writer_id, content, like_count, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                202L,
+                100L,
+                2L,
+                "구매자가 작성한 댓글입니다.",
+                0
+        );
+
+        feedCommentService.deleteComment(1L, 100L, 202L, seller);
+        feedCommentRepository.flush();
+        feedPostRepository.flush();
+
+        Integer commentCount = jdbcTemplate.queryForObject(
+                "SELECT comment_count FROM feed_posts WHERE id = ?",
+                Integer.class,
+                100L
+        );
+
+        assertThat(feedCommentRepository.count()).isZero();
+        assertThat(commentCount).isEqualTo(0);
+    }
+
+    @Test
     @DisplayName("피드 댓글 삭제 - 작성자가 아니면 예외 발생")
     void deleteComment_accessDenied() {
         jdbcTemplate.update(
@@ -205,7 +304,7 @@ public class FeedCommentServiceTest {
 
         assertThatThrownBy(() -> feedCommentService.deleteComment(1L, 100L, 202L, buyer))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining(ErrorCode.FEED_COMMENT_ACCESS_DENIED.getMessage());
+                .hasMessageContaining(ErrorCode.COMMENT_ACCESS_DENIED.getMessage());
     }
 
     @Test

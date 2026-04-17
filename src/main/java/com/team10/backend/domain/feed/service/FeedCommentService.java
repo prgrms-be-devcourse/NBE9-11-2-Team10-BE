@@ -3,8 +3,9 @@ package com.team10.backend.domain.feed.service;
 import com.team10.backend.domain.feed.dto.comment.CommentLikeResponseDto;
 import com.team10.backend.domain.feed.dto.comment.CommentListResponseDto;
 import com.team10.backend.domain.feed.dto.comment.CommentResponseDto;
-import com.team10.backend.domain.feed.dto.comment.CreateFeedCommentRequestDto;
+import com.team10.backend.domain.feed.dto.comment.CreateCommentRequestDto;
 import com.team10.backend.domain.feed.dto.comment.PaginationResponseDto;
+import com.team10.backend.domain.feed.dto.comment.UpdateCommentRequestDto;
 import com.team10.backend.domain.feed.entity.FeedComment;
 import com.team10.backend.domain.feed.entity.FeedCommentLike;
 import com.team10.backend.domain.feed.entity.FeedPost;
@@ -15,10 +16,12 @@ import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -33,7 +36,7 @@ public class FeedCommentService {
     public CommentResponseDto createComment(
             Long sellerId,
             Long feedId,
-            CreateFeedCommentRequestDto requestDto,
+            CreateCommentRequestDto requestDto,
             User currentUser
     ) {
         if (currentUser == null) {
@@ -49,11 +52,20 @@ public class FeedCommentService {
         return CommentResponseDto.from(feedComment, false, currentUser);
     }
 
-    public CommentListResponseDto getComments(Long sellerId, Long feedId, User currentUser) {
+    public CommentListResponseDto getComments(
+            Long sellerId,
+            Long feedId,
+            int page,
+            int size,
+            String sort,
+            User currentUser
+    ) {
         getFeedPost(sellerId, feedId);
 
-        List<CommentResponseDto> comments = feedCommentRepository.findAllByFeedPostIdOrderByCreatedAtDesc(feedId)
-                .stream()
+        Pageable pageable = createPageable(page, size, sort);
+        Page<FeedComment> commentPage = feedCommentRepository.findAllByFeedPostId(feedId, pageable);
+
+        var comments = commentPage.getContent().stream()
                 .map(comment -> {
                     boolean isLiked = currentUser != null
                             && feedCommentLikeRepository.existsByFeedComment_IdAndUser_Id(
@@ -66,8 +78,65 @@ public class FeedCommentService {
 
         return new CommentListResponseDto(
                 comments,
-                new PaginationResponseDto(0, comments.isEmpty() ? 0 : 1, comments.size())
+                new PaginationResponseDto(
+                        commentPage.getNumber(),
+                        commentPage.getTotalPages(),
+                        commentPage.getTotalElements()
+                )
         );
+    }
+
+    private Pageable createPageable(int page, int size, String sort) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 50);
+        Sort safeSort = parseSort(sort);
+
+        return PageRequest.of(safePage, safeSize, safeSort);
+    }
+
+    private Sort parseSort(String sort) {
+        String[] sortParts = sort == null ? new String[0] : sort.split(",");
+        String property = sortParts.length > 0 && "createdAt".equals(sortParts[0])
+                ? sortParts[0]
+                : "createdAt";
+        Sort.Direction direction = sortParts.length > 1 && "asc".equalsIgnoreCase(sortParts[1])
+                ? Sort.Direction.ASC
+                : Sort.Direction.DESC;
+
+        return Sort.by(direction, property);
+    }
+
+    @Transactional
+    public CommentResponseDto updateComment(
+            Long sellerId,
+            Long feedId,
+            Long commentId,
+            UpdateCommentRequestDto requestDto,
+            User currentUser) {
+
+        if (currentUser == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        getFeedPost(sellerId, feedId);
+
+        FeedComment feedComment = feedCommentRepository.findByIdAndFeedPostId(commentId, feedId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+
+        if (!feedComment.getWriter().getId().equals(currentUser.getId())) {
+            throw new BusinessException(ErrorCode.COMMENT_ACCESS_DENIED);
+        }
+
+        feedComment.updateContent(requestDto.content());
+
+
+        boolean isLiked = feedCommentLikeRepository.existsByFeedComment_IdAndUser_Id(
+                commentId,
+                currentUser.getId()
+        );
+
+        return CommentResponseDto.from(feedComment, isLiked, currentUser);
+
     }
 
     @Transactional
@@ -77,11 +146,15 @@ public class FeedCommentService {
         }
 
         FeedPost feedPost = getFeedPost(sellerId, feedId);
-        FeedComment feedComment = feedCommentRepository.findByIdAndFeedPostId(commentId, feedId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.FEED_COMMENT_NOT_FOUND));
 
-        if (!feedComment.getWriter().getId().equals(currentUser.getId())) {
-            throw new BusinessException(ErrorCode.FEED_COMMENT_ACCESS_DENIED);
+        FeedComment feedComment = feedCommentRepository.findByIdAndFeedPostId(commentId, feedId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+
+        boolean isCommentWriter = feedComment.getWriter().getId().equals(currentUser.getId());
+        boolean isFeedOwner = feedPost.getUser().getId().equals(currentUser.getId());
+
+        if (!isCommentWriter && !isFeedOwner) {
+            throw new BusinessException(ErrorCode.COMMENT_ACCESS_DENIED);
         }
 
         feedCommentRepository.delete(feedComment);
@@ -101,7 +174,7 @@ public class FeedCommentService {
 
         getFeedPost(sellerId, feedId);
         FeedComment feedComment = feedCommentRepository.findByIdAndFeedPostId(commentId, feedId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.FEED_COMMENT_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
 
         boolean isLiked = feedCommentLikeRepository.findByFeedComment_IdAndUser_Id(commentId, currentUser.getId())
                 .map(commentLike -> {
