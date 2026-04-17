@@ -1,14 +1,21 @@
 package com.team10.backend.domain.order.service;
 
 import com.team10.backend.domain.order.dto.OrderCreateRequest;
+import com.team10.backend.domain.order.dto.search.OrderDetailResponse;
+import com.team10.backend.domain.order.dto.search.buyer.OrderListResponse;
 import com.team10.backend.domain.order.dto.OrderResponse;
+import com.team10.backend.domain.order.dto.search.buyer.OrderSummaryResponse;
+import com.team10.backend.domain.order.dto.search.seller.SellerOrderListResponse;
+import com.team10.backend.domain.order.dto.search.seller.SellerOrderSummaryResponse;
 import com.team10.backend.domain.order.entity.Order;
 import com.team10.backend.domain.order.entity.OrderDelivery;
 import com.team10.backend.domain.order.entity.OrderProducts;
+import com.team10.backend.domain.order.repository.OrderProductRepository;
 import com.team10.backend.domain.order.repository.OrderRepository;
 import com.team10.backend.domain.product.entity.Product;
 import com.team10.backend.domain.product.repository.ProductRepository;
 import com.team10.backend.domain.user.entity.User;
+import com.team10.backend.domain.user.enums.Role;
 import com.team10.backend.domain.user.repository.UserRepository;
 import com.team10.backend.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
@@ -19,8 +26,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-import static com.team10.backend.global.exception.ErrorCode.PRODUCT_NOT_FOUND;
-import static com.team10.backend.global.exception.ErrorCode.USER_NOT_FOUND;
+import static com.team10.backend.global.exception.ErrorCode.*;
 
 @Service
 @RequiredArgsConstructor
@@ -29,12 +35,13 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final OrderProductRepository orderProductRepository;
 
     @Transactional
     public OrderResponse createOrder(OrderCreateRequest req) {
 
         // 1. 주문자 조회
-        User user = findUser(req);
+        User user = findUser(req.userId());
 
         // 2. 배송 정보 엔티티 생성
         OrderDelivery delivery = deliveryInfo(req);
@@ -61,8 +68,8 @@ public class OrderService {
     }
 
     //유저 찾기
-    public User findUser(OrderCreateRequest request) {
-        return userRepository.findById(request.userId())
+    public User findUser(Long userId) {
+        return userRepository.findById(userId)
                 .orElseThrow(() ->new BusinessException(USER_NOT_FOUND,"해당 유저 정보를 찾을 수 없습니다."));
     }
 
@@ -92,4 +99,67 @@ public class OrderService {
                 }).toList();
     }
 
+    // [Buyer] 주문한 내역 전체 조회
+    @Transactional(readOnly = true)
+    public OrderListResponse getBuyderOrderList(Long userId) {
+        // 유저 있는지 없는지 확인
+        User user = findUser(userId);
+
+        // 해당 유저의 모든 주문 내역을 보여준다. 최신순
+        List<Order> userOrderList = orderRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
+
+        // 3. 주문 엔티티 리스트를 DTO 리스트로 변환
+        List<OrderSummaryResponse> summaryResponses = userOrderList.stream()
+                .map(OrderSummaryResponse::from)
+                .toList();
+
+        // 4. 회원 정보와 주문 목록을 결합하여 반환
+        return OrderListResponse.of(user, summaryResponses);
+    }
+
+    // [Seller] 나에게 들어온 판매 내역 전체 조회
+    @Transactional(readOnly = true)
+    public SellerOrderListResponse getSellerOrderList(Long sellerId) {
+        // 판매자 존재 확인
+        User seller = findUser(sellerId);
+
+        // 이 판매자가 등록한 상품들이 포함된 '주문 상품(OrderProducts)'들을 가져옴
+        // OrderProducts를 통해 Order에 접근하는 방식이 정확합니다.
+        List<OrderProducts> sellerSales = orderProductRepository.findAllBySellerId(sellerId);
+
+        //  OrderProducts 리스트를 SellerOrderSummaryResponse 리스트로 변환
+        List<SellerOrderSummaryResponse> summaryResponses = sellerSales.stream()
+                .map(SellerOrderSummaryResponse::from) // 위에서 만든 정적 팩토리 메서드 활용
+                .toList();
+
+        return SellerOrderListResponse.of(seller, summaryResponses);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderDetailResponse getBuyerOrderDetail(Long curUserId, String orderNumber) {
+
+        // 1. 주문 상세 조회 (없으면 예외 발생)
+        Order order = orderRepository.findByOrderNumberWithDetails(orderNumber)
+                .orElseThrow(() -> new BusinessException(ORDER_NOT_FOUND));
+
+        User user = findUser(curUserId);
+
+        if (user.getRole() == Role.BUYER) {
+            // 구매자라면: 주문서의 주인인지 확인
+            if (!order.getUser().getId().equals(curUserId)) {
+                throw new BusinessException(ACCESS_DENIED, "본인의 주문만 조회할 수 있습니다.");
+            }
+        }else if (user.getRole()  == Role.SELLER) {
+            // 판매자라면: order_product 테이블에서 해당 주문 안에 '내 상품'이 하나라도 포함되어 있는지 확인한다.
+            boolean isSellerOfThisOrder = order.getOrderProducts().stream()
+                    .anyMatch(op -> op.getProduct().getUser().getId().equals(curUserId));
+
+            if (!isSellerOfThisOrder) {
+                throw new BusinessException(ACCESS_DENIED, "해당 주문에 판매한 상품이 존재하지 않습니다.");
+            }
+        }
+
+        // 3. DTO 변환 및 반환
+        return OrderDetailResponse.from(order);
+    }
 }
