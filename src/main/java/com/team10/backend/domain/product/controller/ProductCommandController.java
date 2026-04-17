@@ -3,6 +3,8 @@ package com.team10.backend.domain.product.controller;
 import com.team10.backend.domain.product.dto.ProductCreateRequest;
 import com.team10.backend.domain.product.dto.ProductDetailResponse;
 import com.team10.backend.domain.product.dto.ProductInactiveResponse;
+import com.team10.backend.domain.product.dto.ProductStockRequest;
+import com.team10.backend.domain.product.dto.ProductStockResponse;
 import com.team10.backend.domain.product.dto.ProductUpdateRequest;
 import com.team10.backend.domain.product.service.ProductService;
 import com.team10.backend.global.dto.ApiResponse;
@@ -48,5 +50,14 @@ public class ProductCommandController {
     @Operation(summary = "상품 삭제(비활성화)", description = "판매자가 등록한 상품을 삭제합니다.")
     public ApiResponse<ProductInactiveResponse> inactive(@PathVariable Long productId) {
         return ApiResponse.ok(productService.inactive(productId));
+    }
+
+    @PatchMapping("/{productId}/stock")
+    @Operation(summary = "상품 재고 수정", description = "판매자가 등록한 상품의 재고를 수정합니다.")
+    public ApiResponse<ProductStockResponse> updateStock(
+            @PathVariable Long productId,
+            @RequestBody @Valid ProductStockRequest request
+    ) {
+        return ApiResponse.ok(productService.updateStock(productId, request));
     }
 }

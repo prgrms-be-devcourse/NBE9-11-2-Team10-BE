@@ -5,6 +5,8 @@ import com.team10.backend.domain.product.dto.ProductDetailResponse;
 import com.team10.backend.domain.product.dto.ProductInactiveResponse;
 import com.team10.backend.domain.product.dto.ProductListResponse;
 import com.team10.backend.domain.product.dto.ProductPageResponse;
+import com.team10.backend.domain.product.dto.ProductStockRequest;
+import com.team10.backend.domain.product.dto.ProductStockResponse;
 import com.team10.backend.domain.product.dto.ProductUpdateRequest;
 import com.team10.backend.domain.product.entity.Product;
 import com.team10.backend.domain.product.enums.ProductStatus;
@@ -77,12 +79,15 @@ public class ProductService {
         );
     }
 
+    @Transactional(readOnly = true)
     public ProductDetailResponse detail(Long productId) {
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        if (product.getStatus() == ProductStatus.INACTIVE) throw new BusinessException(ErrorCode.PRODUCT_NOT_FOUND);
+        if (product.getStatus() == ProductStatus.INACTIVE) {
+            throw new BusinessException(ErrorCode.PRODUCT_NOT_FOUND);
+        }
 
         return ProductDetailResponse.from(product);
     }
@@ -99,7 +104,6 @@ public class ProductService {
                 request.productName(),
                 request.description(),
                 request.price(),
-                request.stock(),
                 request.imageUrl(),
                 request.status()
         );
@@ -119,5 +123,19 @@ public class ProductService {
         product.updateStatus(ProductStatus.INACTIVE);
 
         return ProductInactiveResponse.from(product);
+    }
+
+    @Transactional
+    public ProductStockResponse updateStock(Long productId, ProductStockRequest request) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        if (product.getStatus() == ProductStatus.INACTIVE) {
+            throw new BusinessException(ErrorCode.PRODUCT_ALREADY_INACTIVE);
+        }
+
+        product.updateStock(request.stock());
+
+        return ProductStockResponse.of(product.getId(), product.getStock());
     }
 }

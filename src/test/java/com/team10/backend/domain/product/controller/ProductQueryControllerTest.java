@@ -58,7 +58,7 @@ class ProductQueryControllerTest {
     }
 
     @Test
-    @DisplayName("상품 전체 조회 시 type, status 필터 적용 성공")
+    @DisplayName("상품 전체 조회 시, type/status 필터 적용 성공")
     void listProducts_withTypeAndStatusFilter_success() throws Exception {
         mockMvc.perform(get("/api/v1/products")
                         .param("page", "0")

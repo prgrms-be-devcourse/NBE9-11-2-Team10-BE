@@ -4,6 +4,8 @@ import com.team10.backend.domain.product.dto.ProductCreateRequest;
 import com.team10.backend.domain.product.dto.ProductDetailResponse;
 import com.team10.backend.domain.product.dto.ProductInactiveResponse;
 import com.team10.backend.domain.product.dto.ProductPageResponse;
+import com.team10.backend.domain.product.dto.ProductStockRequest;
+import com.team10.backend.domain.product.dto.ProductStockResponse;
 import com.team10.backend.domain.product.dto.ProductUpdateRequest;
 import com.team10.backend.domain.product.entity.Product;
 import com.team10.backend.domain.product.enums.ProductStatus;
@@ -64,7 +66,7 @@ class ProductServiceTest {
     }
 
     @Test
-    @DisplayName("상품 생성 시 SELLING 상태")
+    @DisplayName("상품 생성 시, SELLING 상태")
     void createProduct_defaultStatusSelling() {
         ProductCreateRequest request = new ProductCreateRequest("ABC", "책 설명입니다.", 10000, 100, null, ProductType.BOOK);
 
@@ -206,7 +208,6 @@ class ProductServiceTest {
                 "수정된 상품명",
                 "수정된 설명",
                 12000,
-                20,
                 "https://example.com/new.jpg",
                 ProductType.EBOOK,
                 ProductStatus.SOLD_OUT
@@ -218,7 +219,6 @@ class ProductServiceTest {
         assertThat(response.productName()).isEqualTo("수정된 상품명");
         assertThat(response.description()).isEqualTo("수정된 설명");
         assertThat(response.price()).isEqualTo(12000);
-        assertThat(response.stock()).isEqualTo(20);
         assertThat(response.imageUrl()).isEqualTo("https://example.com/new.jpg");
         assertThat(response.type()).isEqualTo(ProductType.EBOOK);
         assertThat(response.status()).isEqualTo(ProductStatus.SOLD_OUT);
@@ -231,7 +231,6 @@ class ProductServiceTest {
                 "수정된 상품명",
                 "수정된 설명",
                 12000,
-                20,
                 "https://example.com/new.jpg",
                 ProductType.BOOK,
                 ProductStatus.SELLING
@@ -268,7 +267,7 @@ class ProductServiceTest {
     }
 
     @Test
-    @DisplayName("이미 비활성화된 상품 재요청 시 예외 발생")
+    @DisplayName("이미 비활성화된 상품 재요청 시, 예외 발생")
     void inactiveProduct_fail_alreadyInactive() {
         User user = userRepository.findById(1L).orElseThrow();
 
@@ -295,5 +294,66 @@ class ProductServiceTest {
         assertThatThrownBy(() -> productService.inactive(9999L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.PRODUCT_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("재고 수정 성공")
+    void updateStock_success() {
+        User user = userRepository.findById(1L).orElseThrow();
+
+        Product savedProduct = productRepository.save(new Product(
+                user,
+                ProductType.BOOK,
+                "기존 상품명",
+                "기존 설명",
+                10000,
+                10,
+                "https://example.com/old.jpg"
+        ));
+
+        ProductStockRequest request = new ProductStockRequest(30);
+
+        ProductStockResponse response = productService.updateStock(savedProduct.getId(), request);
+
+        assertThat(response.productId()).isEqualTo(savedProduct.getId());
+        assertThat(response.stock()).isEqualTo(30);
+        assertThat(response.message()).isEqualTo("상품 재고가 수정되었습니다.");
+
+        Product product = productRepository.findById(savedProduct.getId()).orElseThrow();
+        assertThat(product.getStock()).isEqualTo(30);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 상품 재고 수정 시, 예외 발생")
+    void updateStock_fail_productNotFound() {
+        ProductStockRequest request = new ProductStockRequest(30);
+
+        assertThatThrownBy(() -> productService.updateStock(9999L, request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.PRODUCT_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("비활성화된 상품 재고 수정 시, 예외 발생")
+    void updateStock_fail_inactiveProduct() {
+        User user = userRepository.findById(1L).orElseThrow();
+
+        Product savedProduct = productRepository.save(new Product(
+                user,
+                ProductType.BOOK,
+                "기존 상품명",
+                "기존 설명",
+                10000,
+                10,
+                "https://example.com/old.jpg"
+        ));
+
+        savedProduct.inactivate();
+
+        ProductStockRequest request = new ProductStockRequest(30);
+
+        assertThatThrownBy(() -> productService.updateStock(savedProduct.getId(), request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.PRODUCT_ALREADY_INACTIVE.getMessage());
     }
 }
