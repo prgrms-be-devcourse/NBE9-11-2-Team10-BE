@@ -1,6 +1,7 @@
 package com.team10.backend.global.util;
 
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 
@@ -16,6 +17,20 @@ public class CookieUtil {
         cookie.setAttribute("SameSite", "Strict");
 
         response.addCookie(cookie);
+    }
+
+    public String getCookieValue(HttpServletRequest request, String name) {
+        Cookie[] cookies = request.getCookies();
+
+        if (cookies == null) return null;
+
+        for (Cookie cookie : cookies) {
+            if (cookie.getName().equals(name)) {
+                return cookie.getValue();
+            }
+        }
+
+        return null;
     }
 
 }
