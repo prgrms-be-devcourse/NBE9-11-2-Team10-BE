@@ -1,6 +1,6 @@
 package com.team10.backend.domain.user.enums;
 
 public enum Role {
-    BUYER,
-    SELLER
+    ROLE_BUYER,
+    ROLE_SELLER
 }
