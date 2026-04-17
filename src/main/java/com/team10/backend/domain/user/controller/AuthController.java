@@ -75,11 +75,25 @@ public class AuthController {
     public ApiResponse<Void> refresh(HttpServletRequest request,
                                  HttpServletResponse response
     ) {
-        String token = cookieUtil.getCookieValue(request, "refreshToken");
-        RefreshResult result = refreshTokenService.refresh(token);
+        String refreshToken = cookieUtil.getCookieValue(request, "refreshToken");
+        RefreshResult result = refreshTokenService.refresh(refreshToken);
 
         cookieUtil.addCookie(response, "accessToken", result.accessToken());
         cookieUtil.addCookie(response, "refreshToken", result.refreshToken());
+
+        return ApiResponse.ok();
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "로그아웃", description = "사용자 로그아웃을 진행합니다.")
+    public ApiResponse<Void> logout(HttpServletRequest request,
+                                    HttpServletResponse response
+    ) {
+        String refreshToken = cookieUtil.getCookieValue(request, "refreshToken");
+        refreshTokenService.revoke(refreshToken);
+
+        cookieUtil.deleteCookie(response, "accessToken");
+        cookieUtil.deleteCookie(response, "refreshToken");
 
         return ApiResponse.ok();
     }

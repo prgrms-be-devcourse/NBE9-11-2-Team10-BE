@@ -58,4 +58,12 @@ public class RefreshTokenService {
         return refreshToken;
     }
 
+    @Transactional
+    public void revoke(String token) {
+        if (token == null || token.isBlank()) {
+            return;
+        }
+        refreshTokenRepository.findByToken(token).ifPresent(RefreshToken::revoke);
+    }
+
 }
