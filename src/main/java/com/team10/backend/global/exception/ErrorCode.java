@@ -11,6 +11,8 @@ public enum ErrorCode {
     // === 공통 (1000~1999) ===
     INTERNAL_SERVER_ERROR("COMMON_001", "서버 내부 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_INPUT("COMMON_002", "입력값이 올바르지 않습니다.", HttpStatus.BAD_REQUEST),
+    // 권한 관련 에러 추가
+    ACCESS_DENIED("COMMON_003", "해당 리소스에 대한 접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
 
     // === 사용자 도메인 (2000~2999) ===
     USER_NOT_FOUND("USER_001", "회원을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
@@ -24,7 +26,10 @@ public enum ErrorCode {
     PRODUCT_ALREADY_INACTIVE("PRODUCT_003", "이미 비활성화된 상품입니다.", HttpStatus.CONFLICT),
 
     // === 피드 도메인 (4000~4999) ===
-    FEED_NOT_FOUND("FEED_001", "피드를 찾을 수 없습니다.", HttpStatus.NOT_FOUND);
+    FEED_NOT_FOUND("FEED_001", "피드를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+
+    // === 주문 도메인 (5000~5999) ===
+    ORDER_NOT_FOUND("ORDER_001", "주문 내역을 찾을 수 없습니다.", HttpStatus.NOT_FOUND);
 
     private final String code;        // 프론트에서 분기용 비즈니스 코드
     private final String message;     // 기본 메시지 (상세 설명은 동적 생성 가능)
