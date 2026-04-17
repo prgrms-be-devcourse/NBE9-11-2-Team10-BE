@@ -104,6 +104,10 @@ public class OrderService {
     public OrderListResponse getBuyderOrderList(Long userId) {
         // 유저 있는지 없는지 확인
         User user = findUser(userId);
+        if (user.getRole() != Role.BUYER) {
+            //판매자 ID일 경우
+            throw new BusinessException(ACCESS_DENIED);
+        }
 
         // 해당 유저의 모든 주문 내역을 보여준다. 최신순
         List<Order> userOrderList = orderRepository.findAllByUserIdOrderByCreatedAtDesc(userId);

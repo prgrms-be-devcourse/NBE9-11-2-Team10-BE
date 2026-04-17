@@ -235,6 +235,24 @@ public class OrderControllerTest {
     }
 
     @Test
+    @DisplayName("구매자 주문 내역 조회 실패 - 구매자가 아닌 Seller ID로 조회 할 경우")
+    void getOrderList_InvalidRole() throws Exception {
+        // Given: Seller 역할을 가진 유저 ID 2
+        jdbcTemplate.update(
+                "INSERT INTO users (id, email, password, name, nickname, phone_number, address, user_status, role, created_at, updated_at) " +
+                        "VALUES (2, 'none@test.com', '1234', '이순신', '순신', '010-1234-5678', '서울시', 'ACTIVE', 'SELLER', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+        );
+        // When & Then
+        // 서비스 로직에서 Role 체크를 한다면 403이나 예외가 발생해야 함
+        mvc.perform(get("/api/v1/orders/buyer/{userId}", 2L))
+                .andDo(print())
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value(ErrorCode.ACCESS_DENIED.getCode()))
+                .andExpect(jsonPath("$.detail").value("해당 리소스에 대한 접근 권한이 없습니다."));
+    }
+
+
+    @Test
     @DisplayName("판매자 판매 내역 조회 성공 - 데이터 정합성 및 payment 상태 검증")
     void getSellerOrderList_Success() throws Exception {
         // 1. 유저 생성 (판매자, 구매자, 타 판매자)
