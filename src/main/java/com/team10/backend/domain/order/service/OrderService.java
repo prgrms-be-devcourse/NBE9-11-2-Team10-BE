@@ -101,7 +101,7 @@ public class OrderService {
 
     // [Buyer] 주문한 내역 전체 조회
     @Transactional(readOnly = true)
-    public OrderListResponse getBuyderOrderList(Long userId) {
+    public OrderListResponse getBuyerOrderList(Long userId) {
         // 유저 있는지 없는지 확인
         User user = findUser(userId);
         if (user.getRole() != Role.BUYER) {

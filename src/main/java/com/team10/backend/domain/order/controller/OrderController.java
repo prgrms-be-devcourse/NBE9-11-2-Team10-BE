@@ -36,7 +36,7 @@ public class OrderController {
     @GetMapping("/buyer/{userId}")
     @Operation(summary = "구매자 주문 전체 조회",description = "유저가 본인 주문내역 전체를 확인할 수 있습니다.")
     public ApiResponse<OrderListResponse> getBuyerOrderList(@PathVariable("userId") Long userId) {
-        OrderListResponse orderListResponse = orderService.getBuyderOrderList(userId);
+        OrderListResponse orderListResponse = orderService.getBuyerOrderList(userId);
         return ApiResponse.ok(orderListResponse);
     }
 
