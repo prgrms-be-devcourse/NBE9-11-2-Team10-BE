@@ -2,6 +2,7 @@ package com.team10.backend.domain.product.service;
 
 import com.team10.backend.domain.product.dto.ProductCreateRequest;
 import com.team10.backend.domain.product.dto.ProductDetailResponse;
+import com.team10.backend.domain.product.dto.ProductInactiveResponse;
 import com.team10.backend.domain.product.dto.ProductPageResponse;
 import com.team10.backend.domain.product.dto.ProductUpdateRequest;
 import com.team10.backend.domain.product.entity.Product;
@@ -237,6 +238,61 @@ class ProductServiceTest {
         );
 
         assertThatThrownBy(() -> productService.update(9999L, request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.PRODUCT_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("상품 비활성화 성공")
+    void inactiveProduct_success() {
+        User user = userRepository.findById(1L).orElseThrow();
+
+        Product savedProduct = productRepository.save(new Product(
+                user,
+                ProductType.BOOK,
+                "비활성화 대상 상품",
+                "상품 설명",
+                10000,
+                10,
+                "https://example.com/book.jpg"
+        ));
+
+        ProductInactiveResponse response = productService.inactive(savedProduct.getId());
+
+        assertThat(response.productId()).isEqualTo(savedProduct.getId());
+        assertThat(response.status()).isEqualTo(ProductStatus.INACTIVE);
+        assertThat(response.message()).isEqualTo("상품이 삭제되었습니다.");
+
+        Product product = productRepository.findById(savedProduct.getId()).orElseThrow();
+        assertThat(product.getStatus()).isEqualTo(ProductStatus.INACTIVE);
+    }
+
+    @Test
+    @DisplayName("이미 비활성화된 상품 재요청 시 예외 발생")
+    void inactiveProduct_fail_alreadyInactive() {
+        User user = userRepository.findById(1L).orElseThrow();
+
+        Product savedProduct = productRepository.save(new Product(
+                user,
+                ProductType.BOOK,
+                "이미 비활성화된 상품",
+                "상품 설명",
+                10000,
+                10,
+                "https://example.com/book.jpg"
+        ));
+
+        savedProduct.updateStatus(ProductStatus.INACTIVE);
+
+        assertThatThrownBy(() -> productService.inactive(savedProduct.getId()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.PRODUCT_ALREADY_INACTIVE.getMessage());
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 상품 비활성화 시, 예외 발생")
+    void inactiveProduct_fail_productNotFound() {
+        assertThatThrownBy(() -> productService.inactive(9999L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.PRODUCT_NOT_FOUND.getMessage());
     }

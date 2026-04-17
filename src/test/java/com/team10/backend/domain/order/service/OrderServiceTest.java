@@ -2,7 +2,6 @@ package com.team10.backend.domain.order.service;
 
 import com.team10.backend.domain.order.dto.OrderCreateRequest;
 import com.team10.backend.domain.order.dto.OrderResponse;
-import com.team10.backend.domain.order.repository.OrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
