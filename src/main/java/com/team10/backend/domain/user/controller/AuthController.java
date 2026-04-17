@@ -28,6 +28,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import static com.team10.backend.global.constant.CookieConstants.ACCESS_TOKEN;
+import static com.team10.backend.global.constant.CookieConstants.REFRESH_TOKEN;
+
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -64,8 +67,8 @@ public class AuthController {
                                 HttpServletResponse response
     ) {
         LoginResult result = authService.login(request);
-        cookieUtil.addCookie(response, "accessToken", result.accessToken());
-        cookieUtil.addCookie(response, "refreshToken", result.refreshToken());
+        cookieUtil.addCookie(response, ACCESS_TOKEN, result.accessToken());
+        cookieUtil.addCookie(response, REFRESH_TOKEN, result.refreshToken());
 
         return ApiResponse.ok(result.response());
     }
@@ -75,11 +78,11 @@ public class AuthController {
     public ApiResponse<Void> refresh(HttpServletRequest request,
                                  HttpServletResponse response
     ) {
-        String refreshToken = cookieUtil.getCookieValue(request, "refreshToken");
+        String refreshToken = cookieUtil.getCookieValue(request, REFRESH_TOKEN);
         RefreshResult result = refreshTokenService.refresh(refreshToken);
 
-        cookieUtil.addCookie(response, "accessToken", result.accessToken());
-        cookieUtil.addCookie(response, "refreshToken", result.refreshToken());
+        cookieUtil.addCookie(response, ACCESS_TOKEN, result.accessToken());
+        cookieUtil.addCookie(response, REFRESH_TOKEN, result.refreshToken());
 
         return ApiResponse.ok();
     }
@@ -89,11 +92,11 @@ public class AuthController {
     public ApiResponse<Void> logout(HttpServletRequest request,
                                     HttpServletResponse response
     ) {
-        String refreshToken = cookieUtil.getCookieValue(request, "refreshToken");
+        String refreshToken = cookieUtil.getCookieValue(request, REFRESH_TOKEN);
         refreshTokenService.revoke(refreshToken);
 
-        cookieUtil.deleteCookie(response, "accessToken");
-        cookieUtil.deleteCookie(response, "refreshToken");
+        cookieUtil.deleteCookie(response, ACCESS_TOKEN);
+        cookieUtil.deleteCookie(response, REFRESH_TOKEN);
 
         return ApiResponse.ok();
     }

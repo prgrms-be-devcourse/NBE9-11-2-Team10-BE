@@ -16,6 +16,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+import static com.team10.backend.global.constant.CookieConstants.ACCESS_TOKEN;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -30,7 +32,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException
     {
         // 쿠키 확인
-        String token = cookieUtil.getCookieValue(request,"accessToken");
+        String token = cookieUtil.getCookieValue(request, ACCESS_TOKEN);
 
         if(token == null || token.isBlank()) {
            filterChain.doFilter(request, response);

@@ -15,6 +15,8 @@ import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.List;
 
+import static com.team10.backend.global.constant.JwtConstants.CLAIMS_ROLE;
+
 public class TokenProvider {
 
     private final long expireTime;
@@ -32,7 +34,7 @@ public class TokenProvider {
 
         return Jwts.builder()
                 .subject(String.valueOf(id))
-                .claim("role", role)
+                .claim(CLAIMS_ROLE, role)
                 .issuedAt(issuedAt)
                 .expiration(expiresAt)
                 .signWith(key)
@@ -54,7 +56,7 @@ public class TokenProvider {
     public Authentication getAuthentication(String token) {
         Claims claims = parseClaims(token);
         String userId = claims.getSubject();
-        String role = claims.get("role", String.class);
+        String role = claims.get(CLAIMS_ROLE, String.class);
 
         UserDetails userDetails = new User(
                 userId,
