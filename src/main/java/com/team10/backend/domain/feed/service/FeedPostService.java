@@ -1,10 +1,10 @@
 package com.team10.backend.domain.feed.service;
 
-import com.team10.backend.domain.feed.dto.CreateFeedRequestDto;
-import com.team10.backend.domain.feed.dto.CreateFeedResponseDto;
-import com.team10.backend.domain.feed.dto.FeedDto;
-import com.team10.backend.domain.feed.dto.FeedLikeToggleResponseDto;
-import com.team10.backend.domain.feed.dto.FeedListResponseDto;
+import com.team10.backend.domain.feed.dto.post.CreateFeedRequestDto;
+import com.team10.backend.domain.feed.dto.post.CreateFeedResponseDto;
+import com.team10.backend.domain.feed.dto.post.FeedDto;
+import com.team10.backend.domain.feed.dto.post.FeedLikeToggleResponseDto;
+import com.team10.backend.domain.feed.dto.post.FeedListResponseDto;
 import com.team10.backend.domain.feed.entity.FeedLike;
 import com.team10.backend.domain.feed.entity.FeedPost;
 import com.team10.backend.domain.feed.repository.FeedLikeRepository;

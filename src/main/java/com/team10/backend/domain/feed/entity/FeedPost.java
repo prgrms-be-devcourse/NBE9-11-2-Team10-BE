@@ -35,6 +35,10 @@ public class FeedPost extends BaseEntity {
     @OneToMany(mappedBy = "feedPost", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FeedLike> feedLikes = new ArrayList<>();
 
+    @OneToMany(mappedBy = "feedPost", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<FeedComment> comments = new ArrayList<>();
+
+
     private int likeCount = 0;
     private int commentCount = 0;
 
@@ -54,15 +58,13 @@ public class FeedPost extends BaseEntity {
         }
     }
 
-    public void addLike(User user) {
-        this.feedLikes.add(new FeedLike(this, user));
-        increaseLikeCount();
+    public void increaseCommentCount() {
+        this.commentCount++;
     }
 
-    public void removeLikeByUserId(Long userId) {
-        boolean removed = this.feedLikes.removeIf(feedLike -> feedLike.getUser().getId().equals(userId));
-        if (removed) {
-            decreaseLikeCount();
+    public void decreaseCommentCount() {
+        if (this.commentCount > 0) {
+            this.commentCount--;
         }
     }
 }
