@@ -18,9 +18,10 @@ public enum ErrorCode {
     DUPLICATE_NICKNAME("USER_003", "이미 사용 중인 닉네임입니다.", HttpStatus.CONFLICT),
     LOGIN_FAILED("USER_004", "아이디 또는 비밀번호가 일치하지 않습니다.", HttpStatus.NOT_FOUND),
 
-    // === 상품 도메인 (3000~3999) ===,
+    // === 상품 도메인 (3000~3999) ===
     PRODUCT_NOT_FOUND("PRODUCT_001", "상품을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     INSUFFICIENT_STOCK("PRODUCT_002", "재고가 부족합니다.", HttpStatus.BAD_REQUEST),
+    PRODUCT_ALREADY_INACTIVE("PRODUCT_003", "이미 비활성화된 상품입니다.", HttpStatus.CONFLICT),
 
     // === 피드 도메인 (4000~4999) ===
     FEED_NOT_FOUND("FEED_001", "피드를 찾을 수 없습니다.", HttpStatus.NOT_FOUND);

@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -147,4 +148,57 @@ class ProductCommandControllerTest {
         assertThat(product.getType()).isEqualTo(ProductType.BOOK);
         assertThat(product.getStatus()).isEqualTo(ProductStatus.SELLING);
     }
+
+    @Test
+    @DisplayName("상품 비활성화")
+    void inactiveProduct_success() throws Exception {
+        jdbcTemplate.update(
+                "INSERT INTO products " +
+                        "(id, user_id, type, product_name, description, price, stock, image_url, status, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                1L,
+                1L,
+                "BOOK",
+                "비활성화 대상 상품",
+                "상품 설명",
+                10000,
+                10,
+                "https://www.exam.com/bookimg",
+                "SELLING"
+        );
+
+        mockMvc.perform(patch("/api/v1/stores/me/products/{productId}/inactive", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.productId").value(1))
+                .andExpect(jsonPath("$.data.status").value("INACTIVE"))
+                .andExpect(jsonPath("$.data.message").value("상품이 삭제되었습니다."));
+
+        Product product = productRepository.findById(1L).orElseThrow();
+        assertThat(product.getStatus()).isEqualTo(ProductStatus.INACTIVE);
+    }
+
+    @Test
+    @DisplayName("이미 비활성화된 상품 재요청 시 409")
+    void inactiveProduct_fail_alreadyInactive() throws Exception {
+        jdbcTemplate.update(
+                "INSERT INTO products " +
+                        "(id, user_id, type, product_name, description, price, stock, image_url, status, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                1L,
+                1L,
+                "BOOK",
+                "이미 비활성화된 상품",
+                "상품 설명",
+                10000,
+                10,
+                "https://www.exam.com/bookimg",
+                "INACTIVE"
+        );
+
+        mockMvc.perform(patch("/api/v1/stores/me/products/{productId}/inactive", 1L))
+                .andExpect(status().isConflict());
+    }
+
+
 }

@@ -2,6 +2,7 @@ package com.team10.backend.domain.product.controller;
 
 import com.team10.backend.domain.product.dto.ProductCreateRequest;
 import com.team10.backend.domain.product.dto.ProductDetailResponse;
+import com.team10.backend.domain.product.dto.ProductInactiveResponse;
 import com.team10.backend.domain.product.dto.ProductUpdateRequest;
 import com.team10.backend.domain.product.service.ProductService;
 import com.team10.backend.global.dto.ApiResponse;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -40,5 +42,11 @@ public class ProductCommandController {
             @PathVariable Long productId, @RequestBody @Valid ProductUpdateRequest request
     ) {
         return ApiResponse.ok(productService.update(productId, request));
+    }
+
+    @PatchMapping("/{productId}/inactive")
+    @Operation(summary = "상품 삭제(비활성화)", description = "판매자가 등록한 상품을 삭제합니다.")
+    public ApiResponse<ProductInactiveResponse> inactive(@PathVariable Long productId) {
+        return ApiResponse.ok(productService.inactive(productId));
     }
 }
