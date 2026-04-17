@@ -1,6 +1,6 @@
 package com.team10.backend.domain.feed.service;
 
-import com.team10.backend.domain.feed.dto.comment.CommentLikeResponseDto;
+import com.team10.backend.domain.feed.dto.comment.CommentLikeToggleResponseDto;
 import com.team10.backend.domain.feed.dto.comment.CommentListResponseDto;
 import com.team10.backend.domain.feed.dto.comment.CommentResponseDto;
 import com.team10.backend.domain.feed.dto.comment.CreateCommentRequestDto;
@@ -320,7 +320,7 @@ public class FeedCommentServiceTest {
                 0
         );
 
-        CommentLikeResponseDto result = feedCommentService.toggleCommentLike(1L, 100L, 203L, buyer);
+        CommentLikeToggleResponseDto result = feedCommentService.toggleCommentLike(1L, 100L, 203L, buyer);
         feedCommentLikeRepository.flush();
         feedCommentRepository.flush();
 
@@ -362,7 +362,7 @@ public class FeedCommentServiceTest {
                 2L
         );
 
-        CommentLikeResponseDto result = feedCommentService.toggleCommentLike(1L, 100L, 204L, buyer);
+        CommentLikeToggleResponseDto result = feedCommentService.toggleCommentLike(1L, 100L, 204L, buyer);
         feedCommentLikeRepository.flush();
         feedCommentRepository.flush();
 

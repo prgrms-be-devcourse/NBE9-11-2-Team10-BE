@@ -1,6 +1,6 @@
 package com.team10.backend.domain.feed.dto.comment;
 
-public record CommentLikeResponseDto(
+public record CommentLikeToggleResponseDto(
         boolean isLiked,
         int likeCount
 ) {

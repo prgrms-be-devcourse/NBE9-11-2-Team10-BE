@@ -1,6 +1,6 @@
 package com.team10.backend.domain.feed.service;
 
-import com.team10.backend.domain.feed.dto.comment.CommentLikeResponseDto;
+import com.team10.backend.domain.feed.dto.comment.CommentLikeToggleResponseDto;
 import com.team10.backend.domain.feed.dto.comment.CommentListResponseDto;
 import com.team10.backend.domain.feed.dto.comment.CommentResponseDto;
 import com.team10.backend.domain.feed.dto.comment.CreateCommentRequestDto;
@@ -162,7 +162,7 @@ public class FeedCommentService {
     }
 
     @Transactional
-    public CommentLikeResponseDto toggleCommentLike(
+    public CommentLikeToggleResponseDto toggleCommentLike(
             Long sellerId,
             Long feedId,
             Long commentId,
@@ -188,7 +188,7 @@ public class FeedCommentService {
                     return true;
                 });
 
-        return new CommentLikeResponseDto(isLiked, feedComment.getLikeCount());
+        return new CommentLikeToggleResponseDto(isLiked, feedComment.getLikeCount());
     }
 
     private FeedPost getFeedPost(Long sellerId, Long feedId) {

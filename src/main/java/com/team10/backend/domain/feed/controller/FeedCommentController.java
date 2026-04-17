@@ -1,6 +1,6 @@
 package com.team10.backend.domain.feed.controller;
 
-import com.team10.backend.domain.feed.dto.comment.CommentLikeResponseDto;
+import com.team10.backend.domain.feed.dto.comment.CommentLikeToggleResponseDto;
 import com.team10.backend.domain.feed.dto.comment.CommentListResponseDto;
 import com.team10.backend.domain.feed.dto.comment.CommentResponseDto;
 import com.team10.backend.domain.feed.dto.comment.CreateCommentRequestDto;
@@ -89,7 +89,7 @@ public class FeedCommentController {
     @PostMapping("/{commentId}/like")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "댓글 좋아요", description = "사용자가 피드 댓글에 좋아요를 누릅니다.")
-    public ApiResponse<CommentLikeResponseDto> toggleCommentLike(
+    public ApiResponse<CommentLikeToggleResponseDto> toggleCommentLike(
             @PathVariable Long sellerId,
             @PathVariable Long feedId,
             @PathVariable Long commentId
