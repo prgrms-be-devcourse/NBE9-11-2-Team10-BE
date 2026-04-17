@@ -50,10 +50,14 @@ public record OrderDetailResponse(
         List<OrderItemDto> orderItems   // 주문 상품 상세 리스트 (별도 record)
 ) {
     public static OrderDetailResponse from(Order order) {
+        String paymentStatus = order.getPayments().stream()
+                .findFirst()
+                .map(payment -> payment.getStatus().name())
+                .orElse("READY"); // 결제 전 상태를 기본값으로 설정
         return new OrderDetailResponse(
                 order.getOrderNumber(),
                 order.getTotalAmount(),
-                order.getPayments().isEmpty() ? "UNKNOWN" : order.getPayments().get(0).getStatus().name(),
+                paymentStatus,
                 order.getCreatedAt(),
                 OrderDeliveryDto.from(order.getDelivery()),
                 order.getOrderProducts().stream()
