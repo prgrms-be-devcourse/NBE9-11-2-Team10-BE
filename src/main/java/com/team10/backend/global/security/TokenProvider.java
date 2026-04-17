@@ -28,18 +28,18 @@ public class TokenProvider {
 
     public String generateToken(Long id, Role role) {
         Date issuedAt = new Date();
-        Date expireDate = calculateExpireDate(issuedAt);
+        Date expiresAt = calculateExpiresAt(issuedAt);
 
         return Jwts.builder()
                 .subject(String.valueOf(id))
                 .claim("role", role)
                 .issuedAt(issuedAt)
-                .expiration(expireDate)
+                .expiration(expiresAt)
                 .signWith(key)
                 .compact();
     }
 
-    private Date calculateExpireDate(Date issuedAt) {
+    private Date calculateExpiresAt(Date issuedAt) {
         return new Date(issuedAt.getTime() + expireTime * 1000 * 60);
     }
 

@@ -1,7 +1,6 @@
 package com.team10.backend.domain.user.dto;
 
-public record LoginResult(
-        LoginResponse response,
+public record RefreshResult(
         String accessToken,
         String refreshToken
 ) {}

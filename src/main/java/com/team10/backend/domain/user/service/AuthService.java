@@ -1,5 +1,6 @@
 package com.team10.backend.domain.user.service;
 
+import com.team10.backend.domain.auth.service.RefreshTokenService;
 import com.team10.backend.domain.user.dto.AuthRegisterRequest;
 import com.team10.backend.domain.user.dto.AuthRegisterResponse;
 import com.team10.backend.domain.user.dto.DuplicateCheckResponse;
@@ -27,6 +28,7 @@ public class AuthService {
     private final AuthRepository authRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenProvider tokenProvider;
+    private final RefreshTokenService refreshTokenService;
 
     @Transactional
     public AuthRegisterResponse register(AuthRegisterRequest request) {
@@ -64,10 +66,11 @@ public class AuthService {
 
     public LoginResult login(LoginRequest request) {
         User user = authenticate(request);
-        String accessToken = generateToken(user);
+        String accessToken = tokenProvider.generateToken(user.getId(), user.getRole());
+        String refreshToken = refreshTokenService.createRefreshToken(user);
 
         LoginResponse response = LoginResponse.from(user);
-        return new LoginResult(response, accessToken);
+        return new LoginResult(response, accessToken, refreshToken);
     }
 
     private User authenticate(LoginRequest request) {
@@ -79,10 +82,6 @@ public class AuthService {
         }
 
         return user;
-    }
-
-    private String generateToken(User user) {
-        return tokenProvider.generateToken(user.getId(), user.getRole());
     }
 
 }
