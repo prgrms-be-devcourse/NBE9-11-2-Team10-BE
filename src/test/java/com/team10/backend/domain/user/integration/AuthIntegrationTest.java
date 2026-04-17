@@ -277,7 +277,8 @@ class AuthIntegrationTest {
         // then
         result.andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.email").value("user@example.com"))
-                .andExpect(cookie().exists("accessToken"));
+                .andExpect(cookie().exists("accessToken"))
+                .andExpect(cookie().exists("refreshToken"));
     }
 
     @Test
@@ -312,6 +313,8 @@ class AuthIntegrationTest {
 
         // then
         result.andExpect(status().isBadRequest());
+        result.andExpect(cookie().doesNotExist("accessToken"));
+        result.andExpect(cookie().doesNotExist("refreshToken"));
     }
 
 }

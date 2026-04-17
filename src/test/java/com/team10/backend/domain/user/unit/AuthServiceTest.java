@@ -1,5 +1,6 @@
 package com.team10.backend.domain.user.unit;
 
+import com.team10.backend.domain.auth.service.RefreshTokenService;
 import com.team10.backend.domain.user.dto.AuthRegisterRequest;
 import com.team10.backend.domain.user.dto.AuthRegisterResponse;
 import com.team10.backend.domain.user.dto.DuplicateCheckResponse;
@@ -45,6 +46,9 @@ class AuthServiceTest {
 
     @Mock
     private TokenProvider tokenProvider;
+
+    @Mock
+    private RefreshTokenService refreshTokenService;
 
     @InjectMocks
     private AuthService authService;
@@ -188,6 +192,7 @@ class AuthServiceTest {
         given(passwordEncoder.matches(request.password(), user.getPassword()))
                             .willReturn(true);
         given(tokenProvider.generateToken(user.getId(), user.getRole())).willReturn("test-access-token");
+        given(refreshTokenService.createRefreshToken(user)).willReturn("test-refresh-token");
 
         // when
         LoginResult result = authService.login(request);
@@ -195,6 +200,7 @@ class AuthServiceTest {
         // then
         assertEquals(user.getEmail(), result.response().email());
         assertEquals("test-access-token", result.accessToken());
+        assertEquals("test-refresh-token", result.refreshToken());
     }
 
     @Test
@@ -220,6 +226,7 @@ class AuthServiceTest {
         assertEquals(ErrorCode.LOGIN_FAILED, ex.getErrorCode());
 
         then(tokenProvider).should(never()).generateToken(any(), any());
+        then(refreshTokenService).should(never()).createRefreshToken(any());
     }
 
 
