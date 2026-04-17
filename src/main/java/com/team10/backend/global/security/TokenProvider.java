@@ -59,7 +59,7 @@ public class TokenProvider {
         UserDetails userDetails = new User(
                 userId,
                 null,
-                List.of(new SimpleGrantedAuthority(role))
+                List.of(new SimpleGrantedAuthority("ROLE_" + role))
         );
 
         return new UsernamePasswordAuthenticationToken(

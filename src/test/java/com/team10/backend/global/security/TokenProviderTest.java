@@ -36,7 +36,7 @@ public class TokenProviderTest {
     void generateToken_success() {
         // given
         Long userId = 1L;
-        Role role = Role.BUYER;
+        Role role = Role.ROLE_BUYER;
 
         // when
         String token = tokenProvider.generateToken(userId, role);
@@ -50,7 +50,7 @@ public class TokenProviderTest {
     @DisplayName("토큰에 id와 role이 포함된다")
     void token_contains_claims() {
         // given
-        String token = tokenProvider.generateToken(1L, Role.BUYER);
+        String token = tokenProvider.generateToken(1L, Role.ROLE_BUYER);
 
         // when
         Claims claims = Jwts.parser()
