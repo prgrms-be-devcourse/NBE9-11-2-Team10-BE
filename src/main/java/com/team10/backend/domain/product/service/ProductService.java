@@ -135,14 +135,19 @@ public class ProductService {
             throw new BusinessException(ErrorCode.PRODUCT_ALREADY_INACTIVE);
         }
 
-        product.updateStatus(ProductStatus.INACTIVE);
+        product.inactivate();
 
         return ProductInactiveResponse.from(product);
     }
 
     @Transactional
     public ProductStockResponse updateStock(Long userId, Long productId, ProductStockRequest request) {
-        Product product = getAuthorizedProduct(userId, productId);
+        Product product = productRepository.findByIdWithPessimisticLock(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        if (!product.getUser().getId().equals(userId)) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
 
         if (product.getStatus() == ProductStatus.INACTIVE) {
             throw new BusinessException(ErrorCode.PRODUCT_ALREADY_INACTIVE);
