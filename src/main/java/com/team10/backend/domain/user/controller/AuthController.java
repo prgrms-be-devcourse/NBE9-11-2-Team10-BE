@@ -1,17 +1,20 @@
 package com.team10.backend.domain.user.controller;
 
+import com.team10.backend.domain.auth.service.RefreshTokenService;
 import com.team10.backend.domain.user.dto.AuthRegisterRequest;
 import com.team10.backend.domain.user.dto.AuthRegisterResponse;
 import com.team10.backend.domain.user.dto.DuplicateCheckResponse;
 import com.team10.backend.domain.user.dto.LoginRequest;
 import com.team10.backend.domain.user.dto.LoginResponse;
 import com.team10.backend.domain.user.dto.LoginResult;
+import com.team10.backend.domain.user.dto.RefreshResult;
 import com.team10.backend.domain.user.enums.DuplicateType;
 import com.team10.backend.domain.user.service.AuthService;
 import com.team10.backend.global.dto.ApiResponse;
 import com.team10.backend.global.util.CookieUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -25,6 +28,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import static com.team10.backend.global.constant.CookieConstants.ACCESS_TOKEN;
+import static com.team10.backend.global.constant.CookieConstants.REFRESH_TOKEN;
+
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -33,6 +39,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final RefreshTokenService refreshTokenService;
     private final CookieUtil cookieUtil;
 
     @PostMapping("/register")
@@ -60,9 +67,38 @@ public class AuthController {
                                 HttpServletResponse response
     ) {
         LoginResult result = authService.login(request);
-        cookieUtil.addCookie(response, "accessToken", result.accessToken());
+        cookieUtil.addCookie(response, ACCESS_TOKEN, result.accessToken());
+        cookieUtil.addCookie(response, REFRESH_TOKEN, result.refreshToken());
 
         return ApiResponse.ok(result.response());
+    }
+
+    @PostMapping("/refresh")
+    @Operation(summary = "토큰 재발급", description = "401에러 시 토큰을 재발급 받습니다.")
+    public ApiResponse<Void> refresh(HttpServletRequest request,
+                                 HttpServletResponse response
+    ) {
+        String refreshToken = cookieUtil.getCookieValue(request, REFRESH_TOKEN);
+        RefreshResult result = refreshTokenService.refresh(refreshToken);
+
+        cookieUtil.addCookie(response, ACCESS_TOKEN, result.accessToken());
+        cookieUtil.addCookie(response, REFRESH_TOKEN, result.refreshToken());
+
+        return ApiResponse.ok();
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "로그아웃", description = "사용자 로그아웃을 진행합니다.")
+    public ApiResponse<Void> logout(HttpServletRequest request,
+                                    HttpServletResponse response
+    ) {
+        String refreshToken = cookieUtil.getCookieValue(request, REFRESH_TOKEN);
+        refreshTokenService.revoke(refreshToken);
+
+        cookieUtil.deleteCookie(response, ACCESS_TOKEN);
+        cookieUtil.deleteCookie(response, REFRESH_TOKEN);
+
+        return ApiResponse.ok();
     }
 
 }

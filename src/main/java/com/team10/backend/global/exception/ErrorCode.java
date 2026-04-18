@@ -30,7 +30,12 @@ public enum ErrorCode {
     COMMENT_ACCESS_DENIED("FEED_COMMENT_002", "피드 댓글에 대한 권한이 없습니다.", HttpStatus.FORBIDDEN),
 
     // === 주문 도메인 (5000~5999) ===
-    ORDER_NOT_FOUND("ORDER_001", "주문 내역을 찾을 수 없습니다.", HttpStatus.NOT_FOUND);
+    ORDER_NOT_FOUND("ORDER_001", "주문 내역을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+
+    // === 인증 (6000-6999) ===
+    MISSING_REFRESH_TOKEN("AUTH_001", "refreshToken 값이 존재하지 않습니다.", HttpStatus.UNAUTHORIZED),
+    INVALID_REFRESH_TOKEN("AUTH_002", "유효하지 않은 토큰입니다.", HttpStatus.UNAUTHORIZED),
+    ;
 
     private final String code;        // 프론트에서 분기용 비즈니스 코드
     private final String message;     // 기본 메시지 (상세 설명은 동적 생성 가능)

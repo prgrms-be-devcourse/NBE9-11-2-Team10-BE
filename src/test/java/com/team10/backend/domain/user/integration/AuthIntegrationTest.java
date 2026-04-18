@@ -4,7 +4,7 @@ import com.team10.backend.domain.user.controller.AuthController;
 import com.team10.backend.domain.user.dto.AuthRegisterRequest;
 import com.team10.backend.domain.user.dto.LoginRequest;
 import com.team10.backend.domain.user.enums.Role;
-import com.team10.backend.domain.user.repository.AuthRepository;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,9 +33,6 @@ class AuthIntegrationTest {
 
     @Autowired
     MockMvc mvc;
-
-    @Autowired
-    private AuthRepository authRepository;
 
     @Autowired
     ObjectMapper objectMapper;
@@ -277,7 +274,8 @@ class AuthIntegrationTest {
         // then
         result.andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.email").value("user@example.com"))
-                .andExpect(cookie().exists("accessToken"));
+                .andExpect(cookie().exists("accessToken"))
+                .andExpect(cookie().exists("refreshToken"));
     }
 
     @Test
@@ -312,6 +310,57 @@ class AuthIntegrationTest {
 
         // then
         result.andExpect(status().isBadRequest());
+        result.andExpect(cookie().doesNotExist("accessToken"));
+        result.andExpect(cookie().doesNotExist("refreshToken"));
+    }
+
+    @Test
+    @DisplayName("로그아웃 성공")
+    void logout_success() throws Exception {
+        // given
+        AuthRegisterRequest registerRequest = new AuthRegisterRequest(
+                "user@example.com",
+                "SecurePass123!",
+                "홍길동",
+                "길동이",
+                "010-1111-2222",
+                "서울",
+                Role.BUYER
+        );
+
+        mvc.perform(post("/api/v1/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(registerRequest)));
+
+        // login
+        LoginRequest loginRequest = new LoginRequest(
+                "user@example.com",
+                "SecurePass123!"
+        );
+
+        ResultActions loginResult = mvc.perform(
+                post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest))
+        );
+
+        Cookie refreshCookie = loginResult.andReturn()
+                .getResponse()
+                .getCookie("refreshToken");
+
+        assert refreshCookie != null;
+
+        // when
+        ResultActions result = mvc.perform(
+                post("/api/v1/auth/logout")
+                        .cookie(refreshCookie)
+        ).andDo(print());
+
+        // then
+        result.andExpect(status().isOk());
+
+        result.andExpect(cookie().maxAge("accessToken", 0));
+        result.andExpect(cookie().maxAge("refreshToken", 0));
     }
 
 }

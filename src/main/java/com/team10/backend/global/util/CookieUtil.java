@@ -33,4 +33,15 @@ public class CookieUtil {
         return null;
     }
 
+    public void deleteCookie(HttpServletResponse response, String name) {
+        Cookie cookie = new Cookie(name, "");
+        cookie.setPath("/");
+        cookie.setHttpOnly(true);
+        cookie.setDomain("localhost");
+        cookie.setMaxAge(0);
+        cookie.setSecure(true);
+
+        response.addCookie(cookie);
+    }
+
 }
