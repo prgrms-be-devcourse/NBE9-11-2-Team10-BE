@@ -89,11 +89,25 @@ public class OrderControllerTest {
         );
     }
 
+//    private void insertOrder(Long id, Long userId, String orderNum, int amount, String date) {
+//        jdbcTemplate.update(
+//                "INSERT INTO orders (id, user_id, order_number, total_amount, created_at, updated_at) " +
+//                        "VALUES (?, ?, ?, ?, ?, ?)",
+//                id, userId, orderNum, amount, date, date
+//        );
+//    }
     private void insertOrder(Long id, Long userId, String orderNum, int amount, String date) {
         jdbcTemplate.update(
-                "INSERT INTO orders (id, user_id, order_number, total_amount, created_at, updated_at) " +
-                        "VALUES (?, ?, ?, ?, ?, ?)",
-                id, userId, orderNum, amount, date, date
+                "INSERT INTO orders (id, user_id, order_number, total_amount, status, is_deleted, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                id,
+                userId,
+                orderNum,
+                amount,
+                "PENDING", // status 기본값 (Enum의 문자열 값)
+                0,     // is_deleted 기본값
+                date,
+                date
         );
     }
 
