@@ -2,11 +2,8 @@ package com.team10.backend.domain.order.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team10.backend.domain.order.dto.OrderCreateRequest;
-import com.team10.backend.domain.order.dto.OrderResponse;
 import com.team10.backend.domain.order.service.OrderService;
-import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -23,8 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -50,39 +44,108 @@ public class OrderControllerTest {
 
     @BeforeEach
     void setUp() {
-        // 테스트 실행 전 실제 DB(H2)에 기초 데이터를 밀어넣습니다.
+        cleanupDatabase();
+
+        /// 1. 기본 유저 세팅
+        insertUser(1L, "buyer@test.com", "홍길동", "nickname1", "BUYER");   // 구매자
+        insertUser(3L, "buyer3@test.com", "홍길동3", "nickname3", "BUYER");   // 주문 없는 구매자
+
+        insertUser(2L, "seller@test.com", "홍길동2", "nickname2", "SELLER"); // 판매자
+        insertUser(4L, "seller4@test.com", "홍길동4", "nickname4", "SELLER"); // 판매자 ,판매 상품 없음
+
+        // 2. 기본 상품 세팅 (판매자 2L의 상품들)
+        insertProduct(101L, 2L, "상품A", 10000);
+        insertProduct(102L, 2L, "상품B", 20000);
+        insertProduct(103L, 2L, "상품C", 30000);
+
+        // 3. 주문 및 복합 상황 데이터 세팅
+        setupDefaultOrders();
+    }
+
+    // ================= SQL 집중 관리 영역 =================
+
+    private void cleanupDatabase() {
         jdbcTemplate.update("DELETE FROM payments");
         jdbcTemplate.update("DELETE FROM order_products");
         jdbcTemplate.update("DELETE FROM order_delivery");
         jdbcTemplate.update("DELETE FROM orders");
         jdbcTemplate.update("DELETE FROM products");
         jdbcTemplate.update("DELETE FROM users");
-
-        // 유저 삽입 (ID: 1)
-        jdbcTemplate.update(
-                "INSERT INTO users (id, email, password, name, nickname, phone_number, address, user_status, role, created_at, updated_at) " +
-                        "VALUES (1, 'buyer@test.com', '1234', '홍길동', '길동이', '010-1234-5678', '서울시', 'ACTIVE', 'BUYER', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-        );
-
-        // 상품들 삽입 (각각 가격이 다름)
-        jdbcTemplate.update("INSERT INTO products (id, user_id, product_name, price, stock, type, status, created_at, updated_at) VALUES (?, 1, ?, ?, 10, 'BOOK', 'SELLING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)", 101L, "상품A", 10000);
-        jdbcTemplate.update("INSERT INTO products (id, user_id, product_name, price, stock, type, status, created_at, updated_at) VALUES (?, 1, ?, ?, 10, 'BOOK', 'SELLING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)", 102L, "상품B", 20000);
-        jdbcTemplate.update("INSERT INTO products (id, user_id, product_name, price, stock, type, status, created_at, updated_at) VALUES (?, 1, ?, ?, 10, 'BOOK', 'SELLING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)", 103L, "상품C", 30000);
-
-        // 3. 주문 데이터 생성 (과거 주문)
-        String orderNum1 = "ORD-OLD-001";
-        jdbcTemplate.update("INSERT INTO orders (id, user_id, order_number, total_amount, created_at, updated_at) VALUES (501, 1, ?, 30000, '2024-01-01 10:00:00', '2024-01-01 10:00:00')", orderNum1);
-        jdbcTemplate.update("INSERT INTO order_products (order_id, product_id, quantity, order_price) VALUES (501, 101, 1, 10000)");
-        jdbcTemplate.update("INSERT INTO order_products (order_id, product_id, quantity, order_price) VALUES (501, 102, 1, 20000)");
-        jdbcTemplate.update("INSERT INTO payments (id, order_id, order_number, total_amount, status, created_at, updated_at) VALUES (901, 501, ?, 30000, 'PAID', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)", orderNum1);
-
-        // 4. 주문 데이터 생성 (최신 주문)
-        String orderNum2 = "ORD-NEW-002";
-        jdbcTemplate.update("INSERT INTO orders (id, user_id, order_number, total_amount, created_at, updated_at) VALUES (502, 1, ?, 30000, '2024-04-16 10:00:00', '2024-04-16 10:00:00')", orderNum2);
-        jdbcTemplate.update("INSERT INTO order_products (order_id, product_id, quantity, order_price) VALUES (502, 103, 1, 30000)");
-        jdbcTemplate.update("INSERT INTO payments (id, order_id, order_number, total_amount, status, created_at, updated_at) VALUES (902, 502, ?, 30000, 'PAID', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)", orderNum2);
     }
 
+    private void insertUser(Long id, String email, String name, String nickname, String role) {
+        jdbcTemplate.update(
+                "INSERT INTO users (id, email, password, name, nickname, phone_number, address, user_status, role, created_at, updated_at) " +
+                        "VALUES (?, ?, '1234', ?, ?, '010-0000-0000', '주소', 'ACTIVE', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                id, email, name,nickname, role
+        );
+    }
+
+    private void insertProduct(Long id, Long userId, String name, int price) {
+        jdbcTemplate.update(
+                "INSERT INTO products (id, user_id, product_name, price, stock, type, status, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, 10, 'BOOK', 'SELLING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                id, userId, name, price
+        );
+    }
+
+    private void insertOrder(Long id, Long userId, String orderNum, int amount, String date) {
+        jdbcTemplate.update(
+                "INSERT INTO orders (id, user_id, order_number, total_amount, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?)",
+                id, userId, orderNum, amount, date, date
+        );
+    }
+
+    private void insertOrderProduct(Long id, Long orderId, Long productId, int qty, int price) {
+        jdbcTemplate.update(
+                "INSERT INTO order_products (id, order_id, product_id, quantity, order_price) VALUES (?, ?, ?, ?, ?)",
+                id, orderId, productId, qty, price
+        );
+    }
+
+    private void insertPayment(Long id, Long orderId, String orderNum, int amount, String status) {
+        jdbcTemplate.update(
+                "INSERT INTO payments (id, order_id, order_number, total_amount, status, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                id, orderId, orderNum, amount, status
+        );
+    }
+
+    private void setupDefaultOrders() {
+        // [기존 데이터] 과거 주문 (Buyer 1L이 상품A, B 구매)
+        insertOrder(501L, 1L, "ORD-OLD-001", 30000, "2024-01-01 10:00:00");
+        insertOrderProduct(1001L, 501L, 101L, 1, 10000); // ID: 1001L 추가
+        insertOrderProduct(1002L, 501L, 102L, 1, 20000); // ID: 1002L 추가
+        insertPayment(901L, 501L, "ORD-OLD-001", 30000, "PAID");
+
+        // [기존 데이터] 최신 주문 (Buyer 1L이 상품C 구매)
+        insertOrder(502L, 1L, "ORD-NEW-002", 30000, "2024-04-16 10:00:00");
+        insertOrderProduct(1003L, 502L, 103L, 1, 30000); // ID: 1003L 추가
+        insertPayment(902L, 502L, "ORD-NEW-002", 30000, "PAID");
+
+        // -----------------------------------------------------------
+        // 판매자 판매 내역 테스트용 데이터 (getSellerOrderList_Success용)
+        // -----------------------------------------------------------
+
+        // 1. 추가 유저: 제3의 판매자 (ID: 99L)
+        insertUser(99L, "other@test.com", "남판매", "남다", "SELLER");
+
+        // 2. 추가 상품: 제3의 판매자 상품 (ID: 202L)
+        insertProduct(202L, 99L, "남 상품", 50000);
+
+        // 3. 혼합 주문: ID 1L(홍길동)이 '내 상품(101L)'과 '남의 상품(202L)'을 동시에 주문
+        String mixOrderNum = "ORD-MIX-001";
+        insertOrder(601L, 1L, mixOrderNum, 60000, "2024-04-16 11:00:00");
+
+        // 내 판매 내역 (상품A - 10000원) -> 판매자 ID 2L의 매출이 되어야 함
+        insertOrderProduct(701L, 601L, 101L, 1, 10000);
+        // 남의 판매 내역 (남 상품 - 50000원) -> 판매자 ID 99L의 매출
+        insertOrderProduct(702L, 601L, 202L, 1, 50000);
+
+        // 결제 정보
+        insertPayment(801L, 601L, mixOrderNum, 60000, "PAID");
+    }
 
     @Test
     @DisplayName("주문 생성 성공 - 로직을 통해 합산 금액 검증")
@@ -195,29 +258,27 @@ public class OrderControllerTest {
                 .andExpect(jsonPath("$.data.userId").value(1L))
                 .andExpect(jsonPath("$.data.userName").value("홍길동"))
                 // 최신순 정렬 확인 (ID 502번 주문이 첫 번째에 와야 함)
-                .andExpect(jsonPath("$.data.orders[0].orderNumber").value("ORD-NEW-002"))
-                .andExpect(jsonPath("$.data.orders[0].representativeProductName").value("상품C"))
-                .andExpect(jsonPath("$.data.orders[0].totalQuantity").value(1))
+                .andExpect(jsonPath("$.data.orders[0].orderNumber").value("ORD-MIX-001"))
+                .andExpect(jsonPath("$.data.orders[0].representativeProductName").value("상품A 외 1건"))
+                .andExpect(jsonPath("$.data.orders[0].totalQuantity").value(2))
                 // 두 번째 주문 (외 N건 로직 확인)
-                .andExpect(jsonPath("$.data.orders[1].orderNumber").value("ORD-OLD-001"))
-                .andExpect(jsonPath("$.data.orders[1].representativeProductName").value("상품A 외 1건"))
-                .andExpect(jsonPath("$.data.orders[1].totalQuantity").value(2))
+                .andExpect(jsonPath("$.data.orders[1].orderNumber").value("ORD-NEW-002"))
+                .andExpect(jsonPath("$.data.orders[1].representativeProductName").value("상품C"))
+                .andExpect(jsonPath("$.data.orders[1].totalQuantity").value(1))
+                .andExpect(jsonPath("$.data.orders[2].orderNumber").value("ORD-OLD-001"))
+                .andExpect(jsonPath("$.data.orders[2].representativeProductName").value("상품A 외 1건"))
+                .andExpect(jsonPath("$.data.orders[2].totalQuantity").value(2))
                 .andDo(print());
     }
 
     @Test
     @DisplayName("구매자 주문 목록 조회 성공 - 주문 내역이 없는 경우")
     void t6() throws Exception {
-        // Given: 주문이 없는 새로운 유저 추가
-        jdbcTemplate.update(
-                "INSERT INTO users (id, email, password, name, nickname, phone_number, address, user_status, role, created_at, updated_at) " +
-                        "VALUES (2, 'none@test.com', '1234', '이순신', '순신', '010-1234-5678', '서울시', 'ACTIVE', 'BUYER', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-        );
         // When & Then
-        mvc.perform(get("/api/v1/orders/buyer/{userId}", 2L))
+        mvc.perform(get("/api/v1/orders/buyer/{userId}", 3L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.orders").isEmpty()) // 빈 리스트 반환 확인
-                .andExpect(jsonPath("$.data.userName").value("이순신"));
+                .andExpect(jsonPath("$.data.userName").value("홍길동3"));
     }
 
     @Test
@@ -237,11 +298,8 @@ public class OrderControllerTest {
     @Test
     @DisplayName("구매자 주문 내역 조회 실패 - 구매자가 아닌 Seller ID로 조회 할 경우")
     void getOrderList_InvalidRole() throws Exception {
-        // Given: Seller 역할을 가진 유저 ID 2
-        jdbcTemplate.update(
-                "INSERT INTO users (id, email, password, name, nickname, phone_number, address, user_status, role, created_at, updated_at) " +
-                        "VALUES (2, 'none@test.com', '1234', '이순신', '순신', '010-1234-5678', '서울시', 'ACTIVE', 'SELLER', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-        );
+
+
         // When & Then
         // 서비스 로직에서 Role 체크를 한다면 403이나 예외가 발생해야 함
         mvc.perform(get("/api/v1/orders/buyer/{userId}", 2L))
@@ -255,42 +313,16 @@ public class OrderControllerTest {
     @Test
     @DisplayName("판매자 판매 내역 조회 성공 - 데이터 정합성 및 payment 상태 검증")
     void getSellerOrderList_Success() throws Exception {
-        // 1. 유저 생성 (판매자, 구매자, 타 판매자)
-        jdbcTemplate.update("INSERT INTO users (id, email, password, name, nickname, phone_number, address, user_status, role, created_at, updated_at) " +
-                "VALUES (10, 'seller@test.com', '1234', '이판매', '판다', '010-1-1', '서울', 'ACTIVE', 'SELLER', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
-        jdbcTemplate.update("INSERT INTO users (id, email, password, name, nickname, phone_number, address, user_status, role, created_at, updated_at) " +
-                "VALUES (20, 'unique_buyer@test.com', '1234', '김구매', '산다', '010-2-2', '부산', 'ACTIVE', 'BUYER', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
-        jdbcTemplate.update("INSERT INTO users (id, email, password, name, nickname, phone_number, address, user_status, role, created_at, updated_at) " +
-                "VALUES (99, 'other@test.com', '1234', '남판매', '남다', '010-9-9', '인천', 'ACTIVE', 'SELLER', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
 
-        // 2. 상품 생성 (내 상품 201, 남의 상품 202)
-        jdbcTemplate.update("INSERT INTO products (id, user_id, product_name, price, stock, type, status) VALUES (201, 10, '내 상품', 10000, 100, 'BOOK', 'SELLING')");
-        jdbcTemplate.update("INSERT INTO products (id, user_id, product_name, price, stock, type, status) VALUES (202, 99, '남 상품', 50000, 100, 'BOOK', 'SELLING')");
-
-        // 3. 상황: 한 주문(601)에 내 상품과 남의 상품이 섞여서 결제됨
-        String orderNum = "ORD-MIX-001";
-        jdbcTemplate.update("INSERT INTO orders (id, user_id, order_number, total_amount, created_at) VALUES (601, 20, ?, 60000, '2024-04-16 10:00:00')", orderNum);
-
-        // 내 판매 내역 (10000원 * 1개)
-        jdbcTemplate.update("INSERT INTO order_products (id, order_id, product_id, quantity, order_price) VALUES (701, 601, 201, 1, 10000)");
-        // 남의 판매 내역 (50000원 * 1개)
-        jdbcTemplate.update("INSERT INTO order_products (id, order_id, product_id, quantity, order_price) VALUES (702, 601, 202, 1, 50000)");
-
-        // DTO에서 status를 가져오기 위한 Payment 데이터 (반드시 필요!)
-        jdbcTemplate.update("INSERT INTO payments (id, order_id, order_number, total_amount, status) VALUES (801, 601, ?, 60000, 'PAID')", orderNum);
-
-        // When & Then
-        mvc.perform(get("/api/v1/orders/seller/{userId}", 10L))
+        mvc.perform(get("/api/v1/orders/seller/{userId}", 2L)) // 판매자 2L로 조회
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.sellerId").value(10L))
-                // 검증 1: 내 판매 내역은 1건만 나와야 함 (남의 상품인 702번은 제외)
-                .andExpect(jsonPath("$.data.sales.length()").value(1))
-                // 검증 2: 판매된 상품 정보 확인
-                .andExpect(jsonPath("$.data.sales[0].productName").value("내 상품"))
-                .andExpect(jsonPath("$.data.sales[0].buyerName").value("김구매"))
-                .andExpect(jsonPath("$.data.sales[0].totalAmount").value(10000)) // 10000 * 1
-                .andExpect(jsonPath("$.data.sales[0].status").value("PAID"))
+                .andExpect(jsonPath("$.data.sellerId").value(2L))
+                // 검증 1: 판매자 2L의 상품은 '상품A, B, C'이며, 주문 내역 중 2L의 것만 필터링되어야 함
+                // 위 setup 기준: 501L(상품A, B), 502L(상품C), 601L(상품A) 총 4개의 판매 행이 나옵니다.
+                .andExpect(jsonPath("$.data.sales.length()").value(4))
+                .andExpect(jsonPath("$.data.sales[?(@.productName == '상품A' && @.totalAmount == 10000)]").exists())
+                .andExpect(jsonPath("$.data.sales[?(@.productName == '남 상품')]").doesNotExist()) // 남의 상품은 없어야 함
                 .andDo(print());
     }
 
@@ -311,15 +343,9 @@ public class OrderControllerTest {
     @Test
     @DisplayName("판매자 판매 내역 조회 성공 - 판매 내역이 전혀 없는 경우")
     void getSellerOrderList_Empty_Success() throws Exception {
-        // 1. 판매자 유저 생성 (내역 없음)
-        jdbcTemplate.update("INSERT INTO users (id, email, password, name, nickname, phone_number, address, user_status, role, created_at, updated_at) " +
-                "VALUES (11, 'new_seller@test.com', '1234', '신입판', '새내기', '010-3-3', '광주', 'ACTIVE', 'SELLER', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
-
-        // 2. 상품만 등록하고 주문은 없는 상태
-        jdbcTemplate.update("INSERT INTO products (id, user_id, product_name, price, stock, type, status) VALUES (301, 11, '안 팔리는 상품', 1000, 10, 'BOOK', 'SELLING')");
 
         // When & Then
-        mvc.perform(get("/api/v1/orders/seller/{userId}", 11L))
+        mvc.perform(get("/api/v1/orders/seller/{userId}", 4L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.sales").isArray())

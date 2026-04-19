@@ -1,7 +1,5 @@
 package com.team10.backend.domain.order.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.team10.backend.domain.order.service.OrderService;
 import com.team10.backend.global.exception.ErrorCode;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
