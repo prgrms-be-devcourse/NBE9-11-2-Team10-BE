@@ -1,6 +1,7 @@
 package com.team10.backend.domain.order.controller;
 
 import com.team10.backend.domain.order.dto.OrderCreateRequest;
+import com.team10.backend.domain.order.dto.OrderDeleteResponse;
 import com.team10.backend.domain.order.dto.search.OrderDetailResponse;
 import com.team10.backend.domain.order.dto.search.buyer.OrderListResponse;
 import com.team10.backend.domain.order.dto.OrderResponse;
@@ -25,6 +26,9 @@ public class OrderController {
     private final OrderService orderService;
 
     //Todo 주문 검증
+    //  주문 상태 업데이트 (PENDING -> SUCCESS)
+    //  결제 상태 업데이트 (READY -> PAID)(엔티티 내 구현)
+    //  배송 상태 업데이트 (null -> READY)(")
 
     @PostMapping
     @Operation(summary = "주문 등록", description = "구매자가 상품을 구매할때 주문을 생성합니다.")
@@ -53,6 +57,17 @@ public class OrderController {
                                                                 @PathVariable("orderNumber") String orderNumber) {
         OrderDetailResponse orderDetailResponse = orderService.getOrderDetail(userId, orderNumber);
         return ApiResponse.ok(orderDetailResponse);
+    }
+
+    @DeleteMapping("/{userId}/{orderNumber}")
+    @Operation(summary = "주문 삭제(취소,환불)", description = "주문 번호를 통해 주문을 삭제(소프트 딜리트)합니다.")
+    public ApiResponse<OrderDeleteResponse> deleteOrder(
+            @PathVariable("userId") Long userId,
+            @PathVariable("orderNumber") String orderNumber) {
+
+        orderService.deleteOrderSoft(userId, orderNumber);
+
+        return ApiResponse.ok(new OrderDeleteResponse(orderNumber, "성공적으로 삭제되었습니다."));
     }
 
 }

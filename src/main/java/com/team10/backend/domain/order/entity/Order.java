@@ -1,5 +1,6 @@
 package com.team10.backend.domain.order.entity;
 
+import com.team10.backend.domain.order.enums.OrderStatus;
 import com.team10.backend.domain.order.enums.PaymentStatus;
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.global.entity.BaseEntity;
@@ -8,6 +9,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SoftDelete;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +18,7 @@ import java.util.List;
 @Table(name = "orders")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@SoftDelete(columnName = "is_deleted") // 삭제 시 is_deleted 필드를 true로 UPDATE, 조회 할 때, true값 필터링 자동 수행
 public class Order extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -29,11 +32,19 @@ public class Order extends BaseEntity {
     @Column(name="total_amount")
     private int totalAmount;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private OrderStatus status; // PENDING, SUCCESS, CANCELLED
+
+    @Column(name = "is_deleted")
+    private boolean isDeleted = false;
+
     @Builder
     private Order(User user, String orderNumber, int totalAmount) {
         this.user = user;
         this.orderNumber = orderNumber;
         this.totalAmount = totalAmount;
+        this.status = OrderStatus.PENDING; // 생성 시 기본값
     }
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -93,4 +104,8 @@ public class Order extends BaseEntity {
         payment.setOrder(this);
     }
 
+    public void cancelStatusOrder() {
+        // 만약 별도의 OrderStatus 필드가 있다면 CANCEL로 변경
+         this.status = OrderStatus.CANCELED;
+    }
 }

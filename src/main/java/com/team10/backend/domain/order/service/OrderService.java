@@ -10,6 +10,9 @@ import com.team10.backend.domain.order.dto.search.seller.SellerOrderSummaryRespo
 import com.team10.backend.domain.order.entity.Order;
 import com.team10.backend.domain.order.entity.OrderDelivery;
 import com.team10.backend.domain.order.entity.OrderProducts;
+import com.team10.backend.domain.order.entity.Payment;
+import com.team10.backend.domain.order.enums.DeliveryStatus;
+import com.team10.backend.domain.order.enums.PaymentStatus;
 import com.team10.backend.domain.order.repository.OrderProductRepository;
 import com.team10.backend.domain.order.repository.OrderRepository;
 import com.team10.backend.domain.product.entity.Product;
@@ -36,6 +39,7 @@ public class OrderService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final OrderProductRepository orderProductRepository;
+    private final RefundService refundService;
 
     @Transactional
     public OrderResponse createOrder(OrderCreateRequest req) {
@@ -169,5 +173,68 @@ public class OrderService {
 
         // 3. DTO 변환 및 반환
         return OrderDetailResponse.from(order);
+    }
+
+    @Transactional
+    public void deleteOrderSoft(Long userId, String orderNumber) {
+        //주문 내역 조회
+        Order order = orderRepository.findByOrderNumber(orderNumber)
+                .orElseThrow(() -> new BusinessException(ORDER_NOT_FOUND, "주문을 찾을 수 없습니다."));
+
+        //권한 및 배송 상태 검증
+        validateOrderDelete(userId, order);
+
+        // 결제 상태와 재고 로직에 대한 검증
+        handlePaymentAndStock(order);
+
+        order.cancelStatusOrder(); //주문 상태 canceled로 변경
+
+        // 내부적으로 @SQLDelete가 작동하여 'is_deleted = true'로 업데이트함
+        //주문 데이터가 삭제된것으로 변경된다. 하드 딜리트가 아니다.
+        orderRepository.delete(order);
+    }
+
+    private void validateOrderDelete(Long userId, Order order) {
+
+        if (!order.getUser().getId().equals(userId)) {
+            throw new BusinessException(ACCESS_DENIED);
+        }
+        // SHIPPING(배송중), COMPLETED(배송완료)일 경우 예외 발생
+        if (order.getDelivery().getStatus() == DeliveryStatus.SHIPPING ||
+                order.getDelivery().getStatus()== DeliveryStatus.COMPLETED) {
+            throw new BusinessException(CANNOT_CANCEL_SHIPPING_ORDER, "이미 출고된 상품은 취소할 수 없습니다.");
+        }
+    }
+
+    private void handlePaymentAndStock(Order order) {
+        // 1. 결제 리스트가 비어있는지 확인 => 한 주문에서 여러번의 결제가 발생할 경우 고려
+        if (order.getPayments() == null || order.getPayments().isEmpty()) {
+            throw new BusinessException(PAYMENT_NOT_FOUND, "결제 정보가 존재하지 않습니다.");
+        }
+
+        Payment latestPayment = order.getPayments().get(order.getPayments().size() - 1);
+        PaymentStatus paymentStatus = latestPayment.getStatus();
+
+        // 1. 이미 결제된 경우 환불 로직 실행
+        if (paymentStatus == PaymentStatus.PAID) {
+
+            // 이 메서드 안에서 예외가 터지면 전체 트랜잭션이 롤백된다.
+            // 즉, DB의 주문 삭제도 안 일어나고 재고도 안 바뀐다.
+            //환불 승인이 나지 않으면 우리 DB의 is_deleted는 절대 true로 바뀌지 않고 재고도 변하지 않는다.
+            refundService.requestRefund(latestPayment.getPaymentKey(), latestPayment.getTotalAmount()); //환불 로직
+
+            //todo 재시도 로직은 추후에 고려
+        }
+
+        // 2. 재고 복구 로직
+        // 결제 전(READY)이거나 결제 완료(PAID)였던 경우 모두 재고를 돌려줘야 합니다.
+        if (paymentStatus == PaymentStatus.READY || paymentStatus == PaymentStatus.PAID) {
+            // 필드명이 orderProducts 임을 확인하세요!
+            order.getOrderProducts().forEach(orderProduct -> {
+                //Todo 재고 증가 로직
+                // Product 엔티티에 추가한 addStock 호출
+//                orderProduct.getProduct().addStock(orderProduct.getQuantity());
+            });
+        }
     }
 }

@@ -35,7 +35,13 @@ public enum ErrorCode {
     // === 인증 (6000-6999) ===
     MISSING_REFRESH_TOKEN("AUTH_001", "refreshToken 값이 존재하지 않습니다.", HttpStatus.UNAUTHORIZED),
     INVALID_REFRESH_TOKEN("AUTH_002", "유효하지 않은 토큰입니다.", HttpStatus.UNAUTHORIZED),
-    ;
+
+    //=== 결제 도메인(6000~6999) ===
+    PAYMENT_NOT_FOUND("PAYMENT_001","결제 정보가 존재하지 않습니다.",HttpStatus.NOT_FOUND),
+
+    //=== 배송 도메인(7000~7999) ===
+    CANNOT_CANCEL_SHIPPING_ORDER("DELIVERY_01","이미 출고된 상품은 취소할 수 없습니다.",HttpStatus.BAD_REQUEST);
+
 
     private final String code;        // 프론트에서 분기용 비즈니스 코드
     private final String message;     // 기본 메시지 (상세 설명은 동적 생성 가능)
