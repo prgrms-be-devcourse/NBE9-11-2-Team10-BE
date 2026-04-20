@@ -112,4 +112,8 @@ public class Order extends BaseEntity {
         // 만약 별도의 OrderStatus 필드가 있다면 CANCEL로 변경
          this.status = OrderStatus.CANCELED;
     }
+    public void successStatusOrder() {
+        // 만약 별도의 OrderStatus 필드가 있다면 CANCEL로 변경
+        this.status = OrderStatus.SUCCESS;
+    }
 }
