@@ -36,7 +36,7 @@ public class SecurityConfig {
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/members/login", "/api/v1/members/join").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/members/logout").permitAll()
-//                        .requestMatchers("/api/v1/feed/me/**", "/api/v1/stores/me/products/**").hasRole("SELLER")
+                        .requestMatchers("/api/v1/feed/me/**", "/api/v1/stores/me/products/**").hasRole("SELLER")
                         .anyRequest().permitAll()
                 )
                 .csrf(AbstractHttpConfigurer::disable)

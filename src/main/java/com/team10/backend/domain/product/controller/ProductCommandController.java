@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,30 +35,41 @@ public class ProductCommandController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "상품 등록", description = "판매자가 신규 상품을 등록합니다.")
     public ApiResponse<ProductDetailResponse> create(
-            @RequestBody @Valid ProductCreateRequest request) {
-        return ApiResponse.ok(productService.create(1L, request));
+            @RequestBody @Valid ProductCreateRequest request,
+            Authentication authentication) {
+        Long userId = Long.parseLong(authentication.getName());
+        return ApiResponse.ok(productService.create(userId, request));
     }
 
     @PutMapping("/{productId}")
     @Operation(summary = "상품 수정", description = "판매자가 등록한 상품 정보를 수정합니다.")
     public ApiResponse<ProductDetailResponse> update(
-            @PathVariable Long productId, @RequestBody @Valid ProductUpdateRequest request
+            @PathVariable Long productId,
+            @RequestBody @Valid ProductUpdateRequest request,
+            Authentication authentication
     ) {
-        return ApiResponse.ok(productService.update(productId, request));
+        Long userId = Long.parseLong(authentication.getName());
+        return ApiResponse.ok(productService.update(userId, productId, request));
     }
 
     @PatchMapping("/{productId}/inactive")
     @Operation(summary = "상품 삭제(비활성화)", description = "판매자가 등록한 상품을 삭제합니다.")
-    public ApiResponse<ProductInactiveResponse> inactive(@PathVariable Long productId) {
-        return ApiResponse.ok(productService.inactive(productId));
+    public ApiResponse<ProductInactiveResponse> inactive(
+            @PathVariable Long productId,
+            Authentication authentication
+    ) {
+        Long userId = Long.parseLong(authentication.getName());
+        return ApiResponse.ok(productService.inactive(userId, productId));
     }
 
     @PatchMapping("/{productId}/stock")
     @Operation(summary = "상품 재고 수정", description = "판매자가 등록한 상품의 재고를 수정합니다.")
     public ApiResponse<ProductStockResponse> updateStock(
             @PathVariable Long productId,
-            @RequestBody @Valid ProductStockRequest request
+            @RequestBody @Valid ProductStockRequest request,
+            Authentication authentication
     ) {
-        return ApiResponse.ok(productService.updateStock(productId, request));
+        Long userId = Long.parseLong(authentication.getName());
+        return ApiResponse.ok(productService.updateStock(userId, productId, request));
     }
 }
