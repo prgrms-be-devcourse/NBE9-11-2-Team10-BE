@@ -129,6 +129,7 @@ public class ProductService {
 
     @Transactional
     public ProductInactiveResponse inactive(Long userId, Long productId) {
+
         Product product = getAuthorizedProduct(userId, productId);
 
         if (product.getStatus() == ProductStatus.INACTIVE) {
@@ -142,12 +143,8 @@ public class ProductService {
 
     @Transactional
     public ProductStockResponse updateStock(Long userId, Long productId, ProductStockRequest request) {
-        Product product = productRepository.findByIdWithPessimisticLock(productId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        if (!product.getUser().getId().equals(userId)) {
-            throw new BusinessException(ErrorCode.ACCESS_DENIED);
-        }
+        Product product = getAuthorizedProductWithLock(userId, productId);
 
         if (product.getStatus() == ProductStatus.INACTIVE) {
             throw new BusinessException(ErrorCode.PRODUCT_ALREADY_INACTIVE);
@@ -159,7 +156,20 @@ public class ProductService {
     }
 
     private Product getAuthorizedProduct(Long userId, Long productId) {
+
         Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        if (!product.getUser().getId().equals(userId)) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+
+        return product;
+    }
+
+    private Product getAuthorizedProductWithLock(Long userId, Long productId) {
+
+        Product product = productRepository.findByIdWithPessimisticLock(productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
 
         if (!product.getUser().getId().equals(userId)) {

@@ -514,6 +514,33 @@ class ProductServiceTest {
     }
 
     @Test
+    @DisplayName("SOLD_OUT 상품의 재고가 0에서 1 이상으로 오르면 SELLING으로 변경")
+    void updateStock_success_sellingWhenStockBecomesPositive() {
+        User user = userRepository.findById(1L).orElseThrow();
+
+        Product soldOutProduct = productRepository.save(new Product(
+                user,
+                ProductType.BOOK,
+                "품절 상품",
+                "설명",
+                10000,
+                0,
+                "https://example.com/book.jpg"
+        ));
+
+        ProductStockRequest request = new ProductStockRequest(5);
+
+        ProductStockResponse response = productService.updateStock(1L, soldOutProduct.getId(), request);
+
+        assertThat(response.productId()).isEqualTo(soldOutProduct.getId());
+        assertThat(response.stock()).isEqualTo(5);
+
+        Product product = productRepository.findById(soldOutProduct.getId()).orElseThrow();
+        assertThat(product.getStock()).isEqualTo(5);
+        assertThat(product.getStatus()).isEqualTo(ProductStatus.SELLING);
+    }
+
+    @Test
     @DisplayName("음수 재고 입력 시, 예외 발생")
     void updateStock_fail_invalidStock() {
         User user = userRepository.findById(1L).orElseThrow();
