@@ -27,6 +27,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -54,7 +56,7 @@ class AuthServiceTest {
     private AuthService authService;
 
     @Test
-    @DisplayName("회원가입 성공")
+    @DisplayName("회원가입 성공 - BUYER")
     void register_success() {
         // given
         AuthRegisterRequest request = new AuthRegisterRequest(
@@ -71,8 +73,8 @@ class AuthServiceTest {
         given(userRepository.existsByNickname(request.nickname())).willReturn(false);
         given(passwordEncoder.encode(request.password())).willReturn("encodedPassword");
 
-        User user = User.create(request, "encodedPassword");
-        given(this.userRepository.save(any(User.class))).willReturn(user);
+        User user = User.create(request, "encodedPassword", request.role());
+        given(userRepository.save(any(User.class))).willReturn(user);
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
 
@@ -80,17 +82,57 @@ class AuthServiceTest {
         AuthRegisterResponse response = authService.register(request);
 
         // then
-        then(this.userRepository).should(times(1)).existsByEmail(request.email());
-        then(this.userRepository).should(times(1)).existsByNickname(request.nickname());
+        then(userRepository).should(times(1)).existsByEmail(request.email());
+        then(userRepository).should(times(1)).existsByNickname(request.nickname());
         then(passwordEncoder).should(times(1)).encode(request.password());
-        then(this.userRepository).should(times(1)).save(userCaptor.capture());
+        then(userRepository).should(times(1)).save(userCaptor.capture());
 
         User savedUser = userCaptor.getValue();
 
         assertEquals(request.email(), savedUser.getEmail());
         assertEquals("encodedPassword", savedUser.getPassword());
+        assertEquals(Role.BUYER, savedUser.getRole());
+        assertNull(savedUser.getSellerInfo());
 
         assertEquals(request.email(), response.email());
+    }
+
+    @Test
+    @DisplayName("회원가입 성공 - SELLER")
+    void register_success_seller() {
+        // given
+        AuthRegisterRequest request = new AuthRegisterRequest(
+                "seller@example.com",
+                "SecurePass123!",
+                "홍길동",
+                "셀러",
+                "010-1111-2222",
+                "서울특별시 강남구 테헤란로 123",
+                Role.SELLER
+        );
+
+        given(userRepository.existsByEmail(request.email())).willReturn(false);
+        given(userRepository.existsByNickname(request.nickname())).willReturn(false);
+        given(passwordEncoder.encode(request.password())).willReturn("encodedPassword");
+
+        User user = User.create(request, "encodedPassword", request.role());
+        given(userRepository.save(any(User.class))).willReturn(user);
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+
+        // when
+        AuthRegisterResponse response = authService.register(request);
+
+        // then
+        then(userRepository).should(times(1)).existsByEmail(request.email());
+        then(userRepository).should(times(1)).existsByNickname(request.nickname());
+        then(passwordEncoder).should(times(1)).encode(request.password());
+        then(userRepository).should(times(1)).save(userCaptor.capture());
+
+        User savedUser = userCaptor.getValue();
+
+        assertEquals(Role.SELLER, savedUser.getRole());
+        assertNotNull(savedUser.getSellerInfo());
     }
 
     @Test
