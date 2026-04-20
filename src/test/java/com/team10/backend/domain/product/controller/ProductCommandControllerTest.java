@@ -1,6 +1,6 @@
 package com.team10.backend.domain.product.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.team10.backend.domain.product.dto.ProductStockRequest;
 import com.team10.backend.domain.product.dto.ProductUpdateRequest;
 import com.team10.backend.domain.product.entity.Product;
@@ -15,6 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -22,8 +23,8 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -40,6 +41,9 @@ class ProductCommandControllerTest {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
@@ -60,10 +64,78 @@ class ProductCommandControllerTest {
                 "ACTIVE",
                 "SELLER"
         );
+
+        jdbcTemplate.update(
+                "INSERT INTO users " +
+                        "(id, email, password, name, nickname, phone_number, address, user_status, role, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                2L,
+                "seller2@test.com",
+                "1234",
+                "테스트판매자2",
+                "seller2",
+                "010-9999-8888",
+                "부산시",
+                "ACTIVE",
+                "SELLER"
+        );
+
+        jdbcTemplate.update(
+                "INSERT INTO users " +
+                        "(id, email, password, name, nickname, phone_number, address, user_status, role, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                3L,
+                "buyer@test.com",
+                "1234",
+                "테스트구매자",
+                "buyer1",
+                "010-1111-2222",
+                "대구시",
+                "ACTIVE",
+                "BUYER"
+        );
     }
 
     @Test
-    @DisplayName("상품 등록")
+    @DisplayName("비로그인 사용자의 상품 등록 요청은 401")
+    void createProduct_fail_unauthorized() throws Exception {
+        String requestBody = """
+                {
+                  "productName": "ABC",
+                  "price": 10000,
+                  "stock": 100,
+                  "type": "BOOK"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/stores/me/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("BUYER 권한 사용자의 상품 등록 요청은 403")
+    @WithMockUser(username = "3", roles = "BUYER")
+    void createProduct_fail_forbidden() throws Exception {
+        String requestBody = """
+                {
+                  "productName": "ABC",
+                  "price": 10000,
+                  "stock": 100,
+                  "type": "BOOK"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/stores/me/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("상품 등록 성공")
+    @WithMockUser(username = "1", roles = "SELLER")
     void createProduct_success() throws Exception {
         String requestBody = """
                 {
@@ -99,7 +171,8 @@ class ProductCommandControllerTest {
     }
 
     @Test
-    @DisplayName("상품 수정")
+    @DisplayName("상품 수정 성공")
+    @WithMockUser(username = "1", roles = "SELLER")
     void updateProduct_success() throws Exception {
         jdbcTemplate.update(
                 "INSERT INTO products " +
@@ -127,7 +200,7 @@ class ProductCommandControllerTest {
 
         mockMvc.perform(put("/api/v1/stores/me/products/{productId}", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(new ObjectMapper().writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.productId").value(1))
@@ -150,7 +223,43 @@ class ProductCommandControllerTest {
     }
 
     @Test
-    @DisplayName("상품 비활성화")
+    @DisplayName("본인 상품이 아닌 상품 수정 요청은 403")
+    @WithMockUser(username = "2", roles = "SELLER")
+    void updateProduct_fail_accessDenied() throws Exception {
+        jdbcTemplate.update(
+                "INSERT INTO products " +
+                        "(id, user_id, type, product_name, description, price, stock, image_url, status, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                1L,
+                1L,
+                "BOOK",
+                "기존 상품명",
+                "기존 설명",
+                10000,
+                10,
+                "https://www.exam.com/oldimg",
+                "SELLING"
+        );
+
+        ProductUpdateRequest request = new ProductUpdateRequest(
+                "ABC 수정본",
+                "상품 수정",
+                12000,
+                "https://www.exam.com/bookimg",
+                ProductType.BOOK,
+                ProductStatus.SELLING
+        );
+
+        mockMvc.perform(put("/api/v1/stores/me/products/{productId}", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value("COMMON_003"));
+    }
+
+    @Test
+    @DisplayName("상품 비활성화 성공")
+    @WithMockUser(username = "1", roles = "SELLER")
     void inactiveProduct_success() throws Exception {
         jdbcTemplate.update(
                 "INSERT INTO products " +
@@ -180,6 +289,7 @@ class ProductCommandControllerTest {
 
     @Test
     @DisplayName("이미 비활성화된 상품 재요청 시 409")
+    @WithMockUser(username = "1", roles = "SELLER")
     void inactiveProduct_fail_alreadyInactive() throws Exception {
         jdbcTemplate.update(
                 "INSERT INTO products " +
@@ -202,6 +312,7 @@ class ProductCommandControllerTest {
 
     @Test
     @DisplayName("재고 수정 성공")
+    @WithMockUser(username = "1", roles = "SELLER")
     void updateStock_success() throws Exception {
         jdbcTemplate.update(
                 "INSERT INTO products " +
@@ -222,7 +333,7 @@ class ProductCommandControllerTest {
 
         mockMvc.perform(patch("/api/v1/stores/me/products/{productId}/stock", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(new ObjectMapper().writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.productId").value(1))
@@ -232,12 +343,13 @@ class ProductCommandControllerTest {
 
     @Test
     @DisplayName("재고를 음수로 수정하면 검증 실패")
+    @WithMockUser(username = "1", roles = "SELLER")
     void updateStock_fail_negativeStock() throws Exception {
         ProductStockRequest request = new ProductStockRequest(-1);
 
         mockMvc.perform(patch("/api/v1/stores/me/products/{productId}/stock", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(new ObjectMapper().writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"));
     }

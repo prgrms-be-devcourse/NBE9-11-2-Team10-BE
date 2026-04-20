@@ -63,12 +63,34 @@ class ProductServiceTest {
                 "ACTIVE",
                 "SELLER"
         );
+
+        jdbcTemplate.update(
+                "INSERT INTO users " +
+                        "(id, email, password, name, nickname, phone_number, address, user_status, role, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                2L,
+                "seller2@test.com",
+                "1234",
+                "테스트판매자2",
+                "seller2",
+                "010-9999-8888",
+                "부산시",
+                "ACTIVE",
+                "SELLER"
+        );
     }
 
     @Test
     @DisplayName("상품 생성 시, SELLING 상태")
     void createProduct_defaultStatusSelling() {
-        ProductCreateRequest request = new ProductCreateRequest("ABC", "책 설명입니다.", 10000, 100, null, ProductType.BOOK);
+        ProductCreateRequest request = new ProductCreateRequest(
+                "ABC",
+                "책 설명입니다.",
+                10000,
+                100,
+                null,
+                ProductType.BOOK
+        );
 
         ProductDetailResponse response = productService.create(1L, request);
 
@@ -213,7 +235,7 @@ class ProductServiceTest {
                 ProductStatus.SOLD_OUT
         );
 
-        ProductDetailResponse response = productService.update(savedProduct.getId(), request);
+        ProductDetailResponse response = productService.update(1L, savedProduct.getId(), request);
 
         assertThat(response.productId()).isEqualTo(savedProduct.getId());
         assertThat(response.productName()).isEqualTo("수정된 상품명");
@@ -236,9 +258,38 @@ class ProductServiceTest {
                 ProductStatus.SELLING
         );
 
-        assertThatThrownBy(() -> productService.update(9999L, request))
+        assertThatThrownBy(() -> productService.update(1L, 9999L, request))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.PRODUCT_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("본인 상품이 아닌 상품 수정 시, 예외 발생")
+    void updateProduct_fail_accessDenied() {
+        User owner = userRepository.findById(1L).orElseThrow();
+
+        Product savedProduct = productRepository.save(new Product(
+                owner,
+                ProductType.BOOK,
+                "기존 상품명",
+                "기존 설명",
+                10000,
+                10,
+                "https://example.com/old.jpg"
+        ));
+
+        ProductUpdateRequest request = new ProductUpdateRequest(
+                "수정된 상품명",
+                "수정된 설명",
+                12000,
+                "https://example.com/new.jpg",
+                ProductType.EBOOK,
+                ProductStatus.SELLING
+        );
+
+        assertThatThrownBy(() -> productService.update(2L, savedProduct.getId(), request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.ACCESS_DENIED.getMessage());
     }
 
     @Test
@@ -256,7 +307,7 @@ class ProductServiceTest {
                 "https://example.com/book.jpg"
         ));
 
-        ProductInactiveResponse response = productService.inactive(savedProduct.getId());
+        ProductInactiveResponse response = productService.inactive(1L, savedProduct.getId());
 
         assertThat(response.productId()).isEqualTo(savedProduct.getId());
         assertThat(response.status()).isEqualTo(ProductStatus.INACTIVE);
@@ -283,7 +334,7 @@ class ProductServiceTest {
 
         savedProduct.updateStatus(ProductStatus.INACTIVE);
 
-        assertThatThrownBy(() -> productService.inactive(savedProduct.getId()))
+        assertThatThrownBy(() -> productService.inactive(1L, savedProduct.getId()))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.PRODUCT_ALREADY_INACTIVE.getMessage());
     }
@@ -291,9 +342,29 @@ class ProductServiceTest {
     @Test
     @DisplayName("존재하지 않는 상품 비활성화 시, 예외 발생")
     void inactiveProduct_fail_productNotFound() {
-        assertThatThrownBy(() -> productService.inactive(9999L))
+        assertThatThrownBy(() -> productService.inactive(1L, 9999L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.PRODUCT_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("본인 상품이 아닌 상품 비활성화 시, 예외 발생")
+    void inactiveProduct_fail_accessDenied() {
+        User owner = userRepository.findById(1L).orElseThrow();
+
+        Product savedProduct = productRepository.save(new Product(
+                owner,
+                ProductType.BOOK,
+                "비활성화 대상 상품",
+                "상품 설명",
+                10000,
+                10,
+                "https://example.com/book.jpg"
+        ));
+
+        assertThatThrownBy(() -> productService.inactive(2L, savedProduct.getId()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.ACCESS_DENIED.getMessage());
     }
 
     @Test
@@ -313,7 +384,7 @@ class ProductServiceTest {
 
         ProductStockRequest request = new ProductStockRequest(30);
 
-        ProductStockResponse response = productService.updateStock(savedProduct.getId(), request);
+        ProductStockResponse response = productService.updateStock(1L, savedProduct.getId(), request);
 
         assertThat(response.productId()).isEqualTo(savedProduct.getId());
         assertThat(response.stock()).isEqualTo(30);
@@ -328,7 +399,7 @@ class ProductServiceTest {
     void updateStock_fail_productNotFound() {
         ProductStockRequest request = new ProductStockRequest(30);
 
-        assertThatThrownBy(() -> productService.updateStock(9999L, request))
+        assertThatThrownBy(() -> productService.updateStock(1L, 9999L, request))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.PRODUCT_NOT_FOUND.getMessage());
     }
@@ -352,8 +423,30 @@ class ProductServiceTest {
 
         ProductStockRequest request = new ProductStockRequest(30);
 
-        assertThatThrownBy(() -> productService.updateStock(savedProduct.getId(), request))
+        assertThatThrownBy(() -> productService.updateStock(1L, savedProduct.getId(), request))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.PRODUCT_ALREADY_INACTIVE.getMessage());
+    }
+
+    @Test
+    @DisplayName("본인 상품이 아닌 상품 재고 수정 시, 예외 발생")
+    void updateStock_fail_accessDenied() {
+        User owner = userRepository.findById(1L).orElseThrow();
+
+        Product savedProduct = productRepository.save(new Product(
+                owner,
+                ProductType.BOOK,
+                "기존 상품명",
+                "기존 설명",
+                10000,
+                10,
+                "https://example.com/old.jpg"
+        ));
+
+        ProductStockRequest request = new ProductStockRequest(30);
+
+        assertThatThrownBy(() -> productService.updateStock(2L, savedProduct.getId(), request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.ACCESS_DENIED.getMessage());
     }
 }

@@ -93,12 +93,10 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductDetailResponse update(Long productId, ProductUpdateRequest request) {
+    public ProductDetailResponse update(Long userId, Long productId, ProductUpdateRequest request) {
 
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+        Product product = getAuthorizedProduct(userId, productId);
 
-        // TODO: 인증/인가 적용 후 판매자 권한 및 본인 상품 여부 검증 추가
         product.update(
                 request.type(),
                 request.productName(),
@@ -112,9 +110,8 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductInactiveResponse inactive(Long productId) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+    public ProductInactiveResponse inactive(Long userId, Long productId) {
+        Product product = getAuthorizedProduct(userId, productId);
 
         if (product.getStatus() == ProductStatus.INACTIVE) {
             throw new BusinessException(ErrorCode.PRODUCT_ALREADY_INACTIVE);
@@ -126,9 +123,8 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductStockResponse updateStock(Long productId, ProductStockRequest request) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+    public ProductStockResponse updateStock(Long userId, Long productId, ProductStockRequest request) {
+        Product product = getAuthorizedProduct(userId, productId);
 
         if (product.getStatus() == ProductStatus.INACTIVE) {
             throw new BusinessException(ErrorCode.PRODUCT_ALREADY_INACTIVE);
@@ -137,5 +133,16 @@ public class ProductService {
         product.updateStock(request.stock());
 
         return ProductStockResponse.of(product.getId(), product.getStock());
+    }
+
+    private Product getAuthorizedProduct(Long userId, Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        if (!product.getUser().getId().equals(userId)) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+
+        return product;
     }
 }
