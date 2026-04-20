@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -123,6 +124,37 @@ public class FeedControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.feeds[0].content").value("조회 테스트용 피드2입니다"))
                 .andExpect(jsonPath("$.data.feeds[1].content").value("조회 테스트용 피드입니다"));
+    }
+
+    @Test
+    @DisplayName("피드 수정 테스트")
+    void updateFeed() throws Exception {
+        jdbcTemplate.update(
+                "INSERT INTO feed_posts (id, image_url, content, user_id, like_count, comment_count, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                100L,
+                "https://test.com/old-image.jpg",
+                "수정 전 피드입니다",
+                1L,
+                0,
+                0
+        );
+
+        String requestBody = """
+            {
+              "content": "수정된 피드입니다",
+              "mediaUrls": ["https://test.com/new-image.jpg"]
+            }
+            """;
+
+        mockMvc.perform(patch("/api/v1/stores/1/feeds/100")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.feedId").value(100))
+                .andExpect(jsonPath("$.data.content").value("수정된 피드입니다"))
+                .andExpect(jsonPath("$.data.mediaUrls[0]").value("https://test.com/new-image.jpg"));
     }
 
     @Test

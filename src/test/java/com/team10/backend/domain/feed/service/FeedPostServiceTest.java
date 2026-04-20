@@ -4,6 +4,8 @@ import com.team10.backend.domain.feed.dto.post.CreateFeedRequestDto;
 import com.team10.backend.domain.feed.dto.post.CreateFeedResponseDto;
 import com.team10.backend.domain.feed.dto.post.FeedLikeToggleResponseDto;
 import com.team10.backend.domain.feed.dto.post.FeedListResponseDto;
+import com.team10.backend.domain.feed.dto.post.UpdateFeedRequestDto;
+import com.team10.backend.domain.feed.dto.post.UpdateFeedResponseDto;
 import com.team10.backend.domain.feed.repository.FeedLikeRepository;
 import com.team10.backend.domain.feed.repository.FeedPostRepository;
 import com.team10.backend.domain.user.entity.User;
@@ -140,6 +142,60 @@ public class FeedPostServiceTest {
         assertThat(result.content()).isEqualTo("테스트 피드 내용입니다.");
         assertThat(result.mediaUrls().get(0)).isEqualTo("https://test-image.com");
         assertThat(feedPostRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("피드 수정 - 성공")
+    void updateFeed_success() {
+        jdbcTemplate.update(
+                "INSERT INTO feed_posts (id, image_url, content, user_id, like_count, comment_count, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                100L,
+                "https://test.com/old-image.jpg",
+                "수정 전 피드입니다",
+                1L,
+                0,
+                0
+        );
+
+        UpdateFeedRequestDto requestDto = new UpdateFeedRequestDto(
+                "수정된 피드입니다",
+                List.of("https://test.com/new-image.jpg")
+        );
+
+        UpdateFeedResponseDto result = feedPostService.updateFeed(1L, 100L, requestDto, testUser);
+
+        assertThat(result.feedId()).isEqualTo(100L);
+        assertThat(result.content()).isEqualTo("수정된 피드입니다");
+        assertThat(result.mediaUrls()).containsExactly("https://test.com/new-image.jpg");
+
+        var updatedFeed = feedPostRepository.findById(100L).orElseThrow();
+        assertThat(updatedFeed.getContent()).isEqualTo("수정된 피드입니다");
+        assertThat(updatedFeed.getImageUrl()).isEqualTo("https://test.com/new-image.jpg");
+    }
+
+    @Test
+    @DisplayName("피드 수정 - 작성자가 아니면 예외 발생")
+    void updateFeed_accessDenied() {
+        jdbcTemplate.update(
+                "INSERT INTO feed_posts (id, image_url, content, user_id, like_count, comment_count, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                101L,
+                "https://test.com/old-image.jpg",
+                "수정 전 피드입니다",
+                1L,
+                0,
+                0
+        );
+
+        UpdateFeedRequestDto requestDto = new UpdateFeedRequestDto(
+                "권한 없는 수정입니다",
+                List.of("https://test.com/new-image.jpg")
+        );
+
+        assertThatThrownBy(() -> feedPostService.updateFeed(1L, 101L, requestDto, buyerUser))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(ErrorCode.ACCESS_DENIED.getMessage());
     }
 
     @Test

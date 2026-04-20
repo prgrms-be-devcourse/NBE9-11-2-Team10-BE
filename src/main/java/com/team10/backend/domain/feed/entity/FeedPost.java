@@ -48,6 +48,11 @@ public class FeedPost extends BaseEntity {
         this.user = user;
     }
 
+    public void update(String imageUrl, String content) {
+        this.imageUrl = imageUrl;
+        this.content = content;
+    }
+
     public void increaseLikeCount() {
         this.likeCount++;
     }
