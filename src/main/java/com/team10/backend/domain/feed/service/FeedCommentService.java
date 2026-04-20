@@ -13,6 +13,7 @@ import com.team10.backend.domain.feed.repository.FeedCommentLikeRepository;
 import com.team10.backend.domain.feed.repository.FeedCommentRepository;
 import com.team10.backend.domain.feed.repository.FeedPostRepository;
 import com.team10.backend.domain.user.entity.User;
+import com.team10.backend.domain.user.repository.UserRepository;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -31,17 +32,16 @@ public class FeedCommentService {
     private final FeedPostRepository feedPostRepository;
     private final FeedCommentRepository feedCommentRepository;
     private final FeedCommentLikeRepository feedCommentLikeRepository;
+    private final UserRepository userRepository;
 
     @Transactional
     public CommentResponseDto createComment(
             Long sellerId,
             Long feedId,
             CreateCommentRequestDto requestDto,
-            User currentUser
+            Long currentUserId
     ) {
-        if (currentUser == null) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
+        User currentUser = getUser(currentUserId);
 
         FeedPost feedPost = getFeedPost(sellerId, feedId);
         FeedComment feedComment = feedCommentRepository.save(
@@ -58,9 +58,10 @@ public class FeedCommentService {
             int page,
             int size,
             String sort,
-            User currentUser
+            Long currentUserId
     ) {
         getFeedPost(sellerId, feedId);
+        User currentUser = getNullableUser(currentUserId);
 
         Pageable pageable = createPageable(page, size, sort);
         Page<FeedComment> commentPage = feedCommentRepository.findAllByFeedPostId(feedId, pageable);
@@ -112,11 +113,9 @@ public class FeedCommentService {
             Long feedId,
             Long commentId,
             UpdateCommentRequestDto requestDto,
-            User currentUser) {
+            Long currentUserId) {
 
-        if (currentUser == null) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
+        User currentUser = getUser(currentUserId);
 
         getFeedPost(sellerId, feedId);
 
@@ -140,10 +139,8 @@ public class FeedCommentService {
     }
 
     @Transactional
-    public void deleteComment(Long sellerId, Long feedId, Long commentId, User currentUser) {
-        if (currentUser == null) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
+    public void deleteComment(Long sellerId, Long feedId, Long commentId, Long currentUserId) {
+        User currentUser = getUser(currentUserId);
 
         FeedPost feedPost = getFeedPost(sellerId, feedId);
 
@@ -166,11 +163,9 @@ public class FeedCommentService {
             Long sellerId,
             Long feedId,
             Long commentId,
-            User currentUser
+            Long currentUserId
     ) {
-        if (currentUser == null) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
+        User currentUser = getUser(currentUserId);
 
         getFeedPost(sellerId, feedId);
         FeedComment feedComment = feedCommentRepository.findByIdAndFeedPostId(commentId, feedId)
@@ -200,5 +195,18 @@ public class FeedCommentService {
         }
 
         return feedPost;
+    }
+
+    private User getUser(Long userId) {
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private User getNullableUser(Long userId) {
+        return userId == null ? null : getUser(userId);
     }
 }

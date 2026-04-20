@@ -6,16 +6,14 @@ import com.team10.backend.domain.feed.dto.comment.CommentResponseDto;
 import com.team10.backend.domain.feed.dto.comment.CreateCommentRequestDto;
 import com.team10.backend.domain.feed.dto.comment.UpdateCommentRequestDto;
 import com.team10.backend.domain.feed.service.FeedCommentService;
-import com.team10.backend.domain.user.entity.User;
-import com.team10.backend.domain.user.repository.UserRepository;
 import com.team10.backend.global.dto.ApiResponse;
-import com.team10.backend.global.exception.BusinessException;
-import com.team10.backend.global.exception.ErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -34,7 +32,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class FeedCommentController {
 
     private final FeedCommentService feedCommentService;
-    private final UserRepository userRepository;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -42,10 +39,10 @@ public class FeedCommentController {
     public ApiResponse<CommentResponseDto> createComment(
             @PathVariable Long sellerId,
             @PathVariable Long feedId,
-            @RequestBody @Valid CreateCommentRequestDto requestDto
+            @RequestBody @Valid CreateCommentRequestDto requestDto,
+            Authentication authentication
     ) {
-        User currentUser = getTestUser();
-        return ApiResponse.ok(feedCommentService.createComment(sellerId, feedId, requestDto, currentUser));
+        return ApiResponse.ok(feedCommentService.createComment(sellerId, feedId, requestDto, currentUserId(authentication)));
     }
 
     @GetMapping
@@ -55,10 +52,10 @@ public class FeedCommentController {
             @PathVariable Long feedId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "createdAt,desc") String sort
+            @RequestParam(defaultValue = "createdAt,desc") String sort,
+            Authentication authentication
     ) {
-        User currentUser = getTestUser();
-        return ApiResponse.ok(feedCommentService.getComments(sellerId, feedId, page, size, sort, currentUser));
+        return ApiResponse.ok(feedCommentService.getComments(sellerId, feedId, page, size, sort, nullableCurrentUserId(authentication)));
     }
 
     @PatchMapping("/{commentId}")
@@ -67,10 +64,10 @@ public class FeedCommentController {
             @PathVariable Long sellerId,
             @PathVariable Long feedId,
             @PathVariable Long commentId,
-            @RequestBody @Valid UpdateCommentRequestDto requestDto
+            @RequestBody @Valid UpdateCommentRequestDto requestDto,
+            Authentication authentication
     ){
-        User currentUser = getTestUser();
-        return ApiResponse.ok(feedCommentService.updateComment(sellerId, feedId, commentId, requestDto, currentUser));
+        return ApiResponse.ok(feedCommentService.updateComment(sellerId, feedId, commentId, requestDto, currentUserId(authentication)));
     }
 
     @DeleteMapping("/{commentId}")
@@ -78,10 +75,10 @@ public class FeedCommentController {
     public ApiResponse<Void> deleteComment(
             @PathVariable Long sellerId,
             @PathVariable Long feedId,
-            @PathVariable Long commentId
+            @PathVariable Long commentId,
+            Authentication authentication
     ) {
-        User currentUser = getTestUser();
-        feedCommentService.deleteComment(sellerId, feedId, commentId, currentUser);
+        feedCommentService.deleteComment(sellerId, feedId, commentId, currentUserId(authentication));
         return ApiResponse.ok();
     }
 
@@ -92,16 +89,21 @@ public class FeedCommentController {
     public ApiResponse<CommentLikeToggleResponseDto> toggleCommentLike(
             @PathVariable Long sellerId,
             @PathVariable Long feedId,
-            @PathVariable Long commentId
+            @PathVariable Long commentId,
+            Authentication authentication
     ) {
-        User currentUser = getTestUser();
-        return ApiResponse.ok(feedCommentService.toggleCommentLike(sellerId, feedId, commentId, currentUser));
+        return ApiResponse.ok(feedCommentService.toggleCommentLike(sellerId, feedId, commentId, currentUserId(authentication)));
     }
 
-
-    // 테스트용 유저 조회 메서드 (실제 구현에서는 AuthenticationPrincipal을 사용)
-    private User getTestUser() {
-        return userRepository.findById(2L)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+    private Long currentUserId(Authentication authentication) {
+        if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
+            return null;
+        }
+        return Long.valueOf(authentication.getName());
     }
+
+    private Long nullableCurrentUserId(Authentication authentication) {
+        return currentUserId(authentication);
+    }
+
 }

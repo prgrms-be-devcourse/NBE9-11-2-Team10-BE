@@ -107,7 +107,7 @@ public class FeedPostServiceTest {
         );
 
         // when
-        FeedListResponseDto result = feedPostService.getFeedsList(sellerId, testUser);
+        FeedListResponseDto result = feedPostService.getFeedsList(sellerId, testUser.getId());
 
         // then
         assertThat(result.feeds()).hasSize(1);
@@ -120,7 +120,7 @@ public class FeedPostServiceTest {
 
         Long sellerId = 1L;
 
-        assertThatThrownBy(() -> feedPostService.getFeedsList(sellerId, testUser))
+        assertThatThrownBy(() -> feedPostService.getFeedsList(sellerId, testUser.getId()))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(ErrorCode.FEED_NOT_FOUND.getMessage());
     }
@@ -135,7 +135,7 @@ public class FeedPostServiceTest {
         );
 
 
-        CreateFeedResponseDto result = feedPostService.createFeed(requestDto, testUser);
+        CreateFeedResponseDto result = feedPostService.createFeed(requestDto, testUser.getId());
 
 
         assertThat(result.feedId()).isNotNull();
@@ -163,7 +163,7 @@ public class FeedPostServiceTest {
                 List.of("https://test.com/new-image.jpg")
         );
 
-        UpdateFeedResponseDto result = feedPostService.updateFeed(1L, 100L, requestDto, testUser);
+        UpdateFeedResponseDto result = feedPostService.updateFeed(100L, requestDto, testUser.getId());
 
         assertThat(result.feedId()).isEqualTo(100L);
         assertThat(result.content()).isEqualTo("수정된 피드입니다");
@@ -193,9 +193,48 @@ public class FeedPostServiceTest {
                 List.of("https://test.com/new-image.jpg")
         );
 
-        assertThatThrownBy(() -> feedPostService.updateFeed(1L, 101L, requestDto, buyerUser))
+        assertThatThrownBy(() -> feedPostService.updateFeed(101L, requestDto, buyerUser.getId()))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(ErrorCode.ACCESS_DENIED.getMessage());
+    }
+
+    @Test
+    @DisplayName("피드 삭제 - 성공")
+    void deleteFeed_success() {
+        jdbcTemplate.update(
+                "INSERT INTO feed_posts (id, image_url, content, user_id, like_count, comment_count, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                102L,
+                "https://test.com/image.jpg",
+                "삭제할 피드입니다",
+                1L,
+                0,
+                0
+        );
+
+        feedPostService.deleteFeed(102L, testUser.getId());
+
+        assertThat(feedPostRepository.findById(102L)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("피드 삭제 - 작성자가 아니면 예외 발생")
+    void deleteFeed_accessDenied() {
+        jdbcTemplate.update(
+                "INSERT INTO feed_posts (id, image_url, content, user_id, like_count, comment_count, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                103L,
+                "https://test.com/image.jpg",
+                "삭제 권한 없는 피드입니다",
+                1L,
+                0,
+                0
+        );
+
+        assertThatThrownBy(() -> feedPostService.deleteFeed(103L, buyerUser.getId()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(ErrorCode.ACCESS_DENIED.getMessage());
+        assertThat(feedPostRepository.findById(103L)).isPresent();
     }
 
     @Test
@@ -212,7 +251,7 @@ public class FeedPostServiceTest {
                 0
         );
 
-        FeedLikeToggleResponseDto result = feedPostService.toggleFeedLike(1L, 100L, buyerUser);
+        FeedLikeToggleResponseDto result = feedPostService.toggleFeedLike(100L, buyerUser.getId());
         feedLikeRepository.flush();
         feedPostRepository.flush();
 
@@ -255,7 +294,7 @@ public class FeedPostServiceTest {
                 2L
         );
 
-        FeedLikeToggleResponseDto result = feedPostService.toggleFeedLike(1L, 101L, buyerUser);
+        FeedLikeToggleResponseDto result = feedPostService.toggleFeedLike(101L, buyerUser.getId());
         feedLikeRepository.flush();
         feedPostRepository.flush();
 
