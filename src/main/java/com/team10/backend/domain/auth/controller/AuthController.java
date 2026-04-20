@@ -1,15 +1,15 @@
-package com.team10.backend.domain.user.controller;
+package com.team10.backend.domain.auth.controller;
 
 import com.team10.backend.domain.auth.service.RefreshTokenService;
-import com.team10.backend.domain.user.dto.AuthRegisterRequest;
-import com.team10.backend.domain.user.dto.AuthRegisterResponse;
-import com.team10.backend.domain.user.dto.DuplicateCheckResponse;
-import com.team10.backend.domain.user.dto.LoginRequest;
-import com.team10.backend.domain.user.dto.LoginResponse;
-import com.team10.backend.domain.user.dto.LoginResult;
-import com.team10.backend.domain.user.dto.RefreshResult;
+import com.team10.backend.domain.auth.dto.AuthRegisterRequest;
+import com.team10.backend.domain.auth.dto.AuthRegisterResponse;
+import com.team10.backend.domain.auth.dto.DuplicateCheckResponse;
+import com.team10.backend.domain.auth.dto.LoginRequest;
+import com.team10.backend.domain.auth.dto.LoginResponse;
+import com.team10.backend.domain.auth.dto.LoginResult;
+import com.team10.backend.domain.auth.dto.RefreshResult;
 import com.team10.backend.domain.user.enums.DuplicateType;
-import com.team10.backend.domain.user.service.AuthService;
+import com.team10.backend.domain.auth.service.AuthService;
 import com.team10.backend.global.dto.ApiResponse;
 import com.team10.backend.global.util.CookieUtil;
 import io.swagger.v3.oas.annotations.Operation;

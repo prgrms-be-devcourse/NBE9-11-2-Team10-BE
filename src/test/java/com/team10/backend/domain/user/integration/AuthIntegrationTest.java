@@ -1,8 +1,8 @@
 package com.team10.backend.domain.user.integration;
 
-import com.team10.backend.domain.user.controller.AuthController;
-import com.team10.backend.domain.user.dto.AuthRegisterRequest;
-import com.team10.backend.domain.user.dto.LoginRequest;
+import com.team10.backend.domain.auth.controller.AuthController;
+import com.team10.backend.domain.auth.dto.AuthRegisterRequest;
+import com.team10.backend.domain.auth.dto.LoginRequest;
 import com.team10.backend.domain.user.enums.Role;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
