@@ -1,5 +1,6 @@
 package com.team10.backend.domain.order.entity;
 
+import com.team10.backend.domain.order.enums.OrderStatus;
 import com.team10.backend.domain.order.enums.PaymentStatus;
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.global.entity.BaseEntity;
@@ -8,6 +9,9 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+import org.hibernate.annotations.SoftDelete;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,24 +20,35 @@ import java.util.List;
 @Table(name = "orders")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@SQLDelete(sql = "UPDATE orders SET is_deleted = true WHERE id = ?")
+@SQLRestriction("is_deleted = false") // 삭제 시 is_deleted 필드를 true로 UPDATE, 조회 할 때, true값 필터링 수행
 public class Order extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    // 외부(토스 등)에 노출할 고유 주문 번호
+    // 외부(토스 등)에 노출할 고유 주문 번호q
     @Column(name = "order_number", nullable = false, unique = true)//유니크로 설정
     private String orderNumber;
 
     @Column(name="total_amount")
     private int totalAmount;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private OrderStatus status; // PENDING, SUCCESS, CANCELLED
+
+    @Column(name = "is_deleted")
+    private boolean isDeleted;
+
     @Builder
     private Order(User user, String orderNumber, int totalAmount) {
         this.user = user;
         this.orderNumber = orderNumber;
         this.totalAmount = totalAmount;
+        this.status = OrderStatus.PENDING; // 생성 시 기본값
+        this.isDeleted = false;
     }
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -93,4 +108,8 @@ public class Order extends BaseEntity {
         payment.setOrder(this);
     }
 
+    public void cancelStatusOrder() {
+        // 만약 별도의 OrderStatus 필드가 있다면 CANCEL로 변경
+         this.status = OrderStatus.CANCELED;
+    }
 }
