@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import static com.team10.backend.global.exception.ErrorCode.INVALID_INPUT;
 import static com.team10.backend.global.exception.ErrorCode.LOGIN_FAILED;
@@ -62,7 +63,7 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public DuplicateCheckResponse checkDuplicate(DuplicateType type, String value) {
-        if (value == null || value.isBlank()) {
+        if (!StringUtils.hasText(value)) {
             throw new BusinessException(INVALID_INPUT);
         }
         value = value.trim().toLowerCase();

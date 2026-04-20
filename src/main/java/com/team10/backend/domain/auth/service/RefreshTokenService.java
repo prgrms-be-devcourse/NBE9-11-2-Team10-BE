@@ -1,8 +1,8 @@
 package com.team10.backend.domain.auth.service;
 
+import com.team10.backend.domain.auth.dto.RefreshResult;
 import com.team10.backend.domain.auth.entity.RefreshToken;
 import com.team10.backend.domain.auth.repository.RefreshTokenRepository;
-import com.team10.backend.domain.auth.dto.RefreshResult;
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
@@ -10,6 +10,7 @@ import com.team10.backend.global.security.TokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -43,7 +44,7 @@ public class RefreshTokenService {
     }
 
     private RefreshToken validateRefreshToken(String token) {
-        if(token == null || token.isBlank()) {
+        if(!StringUtils.hasText(token)) {
             throw new BusinessException(ErrorCode.MISSING_REFRESH_TOKEN);
         }
 
@@ -60,7 +61,7 @@ public class RefreshTokenService {
 
     @Transactional
     public void revoke(String token) {
-        if (token == null || token.isBlank()) {
+        if (!StringUtils.hasText(token)) {
             return;
         }
         refreshTokenRepository.findByToken(token).ifPresent(RefreshToken::revoke);
