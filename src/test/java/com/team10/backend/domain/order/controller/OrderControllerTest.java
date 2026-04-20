@@ -194,6 +194,35 @@ public class OrderControllerTest {
     }
 
     @Test
+    @DisplayName("단일 상품 주문 생성 성공")
+    void t1_3() throws Exception {
+        // Given: 요청 데이터 준비
+        // 상품101(1만)x2 + 상품102(2만)x2 + 상품103(3만)x2
+        OrderCreateRequest.OrderProductReq item1 = new OrderCreateRequest.OrderProductReq(101L, 2);
+        // 예상 총 금액: (10000*2)
+        int expectedTotalAmount = 20000;
+
+        OrderCreateRequest req = new OrderCreateRequest(1L, "서울특별시 강남구 테헤란로", List.of(item1));
+        System.out.println(orderService.createOrder(req));
+        // When: 호출 (실제 서비스의 createOrder가 실행됨)
+        ResultActions resultActions = mvc
+                .perform(
+                        post("/api/v1/orders")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(req))
+                )
+                .andDo(print());
+
+        // Then: 검증
+        // 이제 mockResponse가 아니라 실제 서비스가 계산해서 반환한 값이 검증됩니다.
+        resultActions
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.userId").value(1L))
+                .andExpect(jsonPath("$.data.totalAmount").value(expectedTotalAmount)) // 실제 계산 결과 검증
+                .andExpect(jsonPath("$.data.orderNumber").exists());
+    }
+
+    @Test
     @DisplayName("주문 생성 실패 - 필수 입력값 누락 (Validation)")
     void t2() throws Exception {
         // Given: 주소가 비어있고 상품이 없는 잘못된 요청
