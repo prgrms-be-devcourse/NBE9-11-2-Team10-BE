@@ -110,7 +110,7 @@ public class FeedCommentServiceTest {
     void createComment_success() {
         CreateCommentRequestDto request = new CreateCommentRequestDto("댓글 내용입니다.");
 
-        CommentResponseDto result = feedCommentService.createComment(1L, 100L, request, buyer);
+        CommentResponseDto result = feedCommentService.createComment(1L, 100L, request, buyer.getId());
         feedCommentRepository.flush();
         feedPostRepository.flush();
 
@@ -148,7 +148,7 @@ public class FeedCommentServiceTest {
                 2L
         );
 
-        CommentListResponseDto result = feedCommentService.getComments(1L, 100L, 0, 20, "createdAt,asc", buyer);
+        CommentListResponseDto result = feedCommentService.getComments(1L, 100L, 0, 20, "createdAt,asc", buyer.getId());
 
         assertThat(result.comments()).hasSize(1);
         assertThat(result.comments().get(0).content()).isEqualTo("조회 댓글입니다.");
@@ -180,7 +180,7 @@ public class FeedCommentServiceTest {
 
         UpdateCommentRequestDto request = new UpdateCommentRequestDto("수정 후 댓글입니다.");
 
-        CommentResponseDto result = feedCommentService.updateComment(1L, 100L, 205L, request, buyer);
+        CommentResponseDto result = feedCommentService.updateComment(1L, 100L, 205L, request, buyer.getId());
         feedCommentRepository.flush();
 
         String updatedContent = jdbcTemplate.queryForObject(
@@ -218,7 +218,7 @@ public class FeedCommentServiceTest {
 
         UpdateCommentRequestDto request = new UpdateCommentRequestDto("수정 시도입니다.");
 
-        assertThatThrownBy(() -> feedCommentService.updateComment(1L, 100L, 206L, request, buyer))
+        assertThatThrownBy(() -> feedCommentService.updateComment(1L, 100L, 206L, request, buyer.getId()))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(ErrorCode.COMMENT_ACCESS_DENIED.getMessage());
     }
@@ -242,7 +242,7 @@ public class FeedCommentServiceTest {
                 0
         );
 
-        feedCommentService.deleteComment(1L, 100L, 201L, buyer);
+        feedCommentService.deleteComment(1L, 100L, 201L, buyer.getId());
         feedCommentRepository.flush();
         feedPostRepository.flush();
 
@@ -275,7 +275,7 @@ public class FeedCommentServiceTest {
                 0
         );
 
-        feedCommentService.deleteComment(1L, 100L, 202L, seller);
+        feedCommentService.deleteComment(1L, 100L, 202L, seller.getId());
         feedCommentRepository.flush();
         feedPostRepository.flush();
 
@@ -302,7 +302,7 @@ public class FeedCommentServiceTest {
                 0
         );
 
-        assertThatThrownBy(() -> feedCommentService.deleteComment(1L, 100L, 202L, buyer))
+        assertThatThrownBy(() -> feedCommentService.deleteComment(1L, 100L, 202L, buyer.getId()))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(ErrorCode.COMMENT_ACCESS_DENIED.getMessage());
     }
@@ -320,7 +320,7 @@ public class FeedCommentServiceTest {
                 0
         );
 
-        CommentLikeToggleResponseDto result = feedCommentService.toggleCommentLike(1L, 100L, 203L, buyer);
+        CommentLikeToggleResponseDto result = feedCommentService.toggleCommentLike(1L, 100L, 203L, buyer.getId());
         feedCommentLikeRepository.flush();
         feedCommentRepository.flush();
 
@@ -362,7 +362,7 @@ public class FeedCommentServiceTest {
                 2L
         );
 
-        CommentLikeToggleResponseDto result = feedCommentService.toggleCommentLike(1L, 100L, 204L, buyer);
+        CommentLikeToggleResponseDto result = feedCommentService.toggleCommentLike(1L, 100L, 204L, buyer.getId());
         feedCommentLikeRepository.flush();
         feedCommentRepository.flush();
 
