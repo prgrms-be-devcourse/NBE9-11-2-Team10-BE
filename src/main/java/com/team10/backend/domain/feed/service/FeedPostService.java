@@ -5,6 +5,8 @@ import com.team10.backend.domain.feed.dto.post.CreateFeedResponseDto;
 import com.team10.backend.domain.feed.dto.post.FeedDto;
 import com.team10.backend.domain.feed.dto.post.FeedLikeToggleResponseDto;
 import com.team10.backend.domain.feed.dto.post.FeedListResponseDto;
+import com.team10.backend.domain.feed.dto.post.UpdateFeedRequestDto;
+import com.team10.backend.domain.feed.dto.post.UpdateFeedResponseDto;
 import com.team10.backend.domain.feed.entity.FeedLike;
 import com.team10.backend.domain.feed.entity.FeedPost;
 import com.team10.backend.domain.feed.repository.FeedLikeRepository;
@@ -62,17 +64,38 @@ public class FeedPostService {
     }
 
     @Transactional
+    public UpdateFeedResponseDto updateFeed(
+            Long sellerId,
+            Long feedId,
+            UpdateFeedRequestDto requestDto,
+            User currentUser
+    ) {
+        if (currentUser == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        FeedPost feedPost = getFeedPost(sellerId, feedId);
+
+        if (!feedPost.getUser().getId().equals(currentUser.getId())) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
+
+        String imageUrl = requestDto.mediaUrls() != null && !requestDto.mediaUrls().isEmpty()
+                ? requestDto.mediaUrls().getFirst()
+                : "";
+        feedPost.update(imageUrl, requestDto.content());
+        feedPostRepository.flush();
+
+        return UpdateFeedResponseDto.from(feedPost);
+    }
+
+    @Transactional
     public FeedLikeToggleResponseDto toggleFeedLike(Long sellerId, Long feedId, User currentUser) {
         if (currentUser == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
-        FeedPost feedPost = feedPostRepository.findById(feedId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.FEED_NOT_FOUND));
-
-        if (!feedPost.getUser().getId().equals(sellerId)) {
-            throw new BusinessException(ErrorCode.FEED_NOT_FOUND);
-        }
+        FeedPost feedPost = getFeedPost(sellerId, feedId);
 
         boolean isLiked = feedLikeRepository.findByFeedPostId_AndUser_Id(feedId, currentUser.getId())
                 .map(feedLike -> {
@@ -87,5 +110,16 @@ public class FeedPostService {
                 });
 
         return new FeedLikeToggleResponseDto(isLiked, feedPost.getLikeCount());
+    }
+
+    private FeedPost getFeedPost(Long sellerId, Long feedId) {
+        FeedPost feedPost = feedPostRepository.findById(feedId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.FEED_NOT_FOUND));
+
+        if (!feedPost.getUser().getId().equals(sellerId)) {
+            throw new BusinessException(ErrorCode.FEED_NOT_FOUND);
+        }
+
+        return feedPost;
     }
 }
