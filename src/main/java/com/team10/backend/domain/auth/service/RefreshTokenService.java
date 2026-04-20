@@ -2,7 +2,7 @@ package com.team10.backend.domain.auth.service;
 
 import com.team10.backend.domain.auth.entity.RefreshToken;
 import com.team10.backend.domain.auth.repository.RefreshTokenRepository;
-import com.team10.backend.domain.user.dto.RefreshResult;
+import com.team10.backend.domain.auth.dto.RefreshResult;
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;

@@ -1,15 +1,14 @@
-package com.team10.backend.domain.user.service;
+package com.team10.backend.domain.auth.service;
 
-import com.team10.backend.domain.auth.service.RefreshTokenService;
-import com.team10.backend.domain.user.dto.AuthRegisterRequest;
-import com.team10.backend.domain.user.dto.AuthRegisterResponse;
-import com.team10.backend.domain.user.dto.DuplicateCheckResponse;
-import com.team10.backend.domain.user.dto.LoginRequest;
-import com.team10.backend.domain.user.dto.LoginResponse;
-import com.team10.backend.domain.user.dto.LoginResult;
+import com.team10.backend.domain.auth.dto.AuthRegisterRequest;
+import com.team10.backend.domain.auth.dto.AuthRegisterResponse;
+import com.team10.backend.domain.auth.dto.DuplicateCheckResponse;
+import com.team10.backend.domain.auth.dto.LoginRequest;
+import com.team10.backend.domain.auth.dto.LoginResponse;
+import com.team10.backend.domain.auth.dto.LoginResult;
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.domain.user.enums.DuplicateType;
-import com.team10.backend.domain.user.repository.AuthRepository;
+import com.team10.backend.domain.user.repository.UserRepository;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
 import com.team10.backend.global.security.TokenProvider;
@@ -25,7 +24,7 @@ import static com.team10.backend.global.exception.ErrorCode.LOGIN_FAILED;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private final AuthRepository authRepository;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenProvider tokenProvider;
     private final RefreshTokenService refreshTokenService;
@@ -37,16 +36,16 @@ public class AuthService {
         String encodedPassword = passwordEncoder.encode(request.password());
 
         User user = User.create(request, encodedPassword);
-        User savedUser = authRepository.save(user);
+        User savedUser = userRepository.save(user);
 
         return AuthRegisterResponse.from(savedUser);
     }
 
     private void validateDuplicateUser(AuthRegisterRequest request) {
-        if(authRepository.existsByEmail(request.email())) {
+        if(userRepository.existsByEmail(request.email())) {
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
-        if(authRepository.existsByNickname(request.nickname())) {
+        if(userRepository.existsByNickname(request.nickname())) {
             throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
         }
     }
@@ -58,8 +57,8 @@ public class AuthService {
         }
         value = value.trim().toLowerCase();
         boolean available = switch (type) {
-            case EMAIL -> !authRepository.existsByEmail(value);
-            case NICKNAME -> !authRepository.existsByNickname(value);
+            case EMAIL -> !userRepository.existsByEmail(value);
+            case NICKNAME -> !userRepository.existsByNickname(value);
         };
         return new DuplicateCheckResponse(type, value, available);
     }
@@ -74,7 +73,7 @@ public class AuthService {
     }
 
     private User authenticate(LoginRequest request) {
-        User user = authRepository.findByEmail(request.email())
+        User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new BusinessException(LOGIN_FAILED));
 
         if(!passwordEncoder.matches(request.password(), user.getPassword())) {

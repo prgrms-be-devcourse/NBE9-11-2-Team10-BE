@@ -1,16 +1,16 @@
 package com.team10.backend.domain.user.unit;
 
+import com.team10.backend.domain.auth.dto.AuthRegisterRequest;
+import com.team10.backend.domain.auth.dto.AuthRegisterResponse;
+import com.team10.backend.domain.auth.dto.DuplicateCheckResponse;
+import com.team10.backend.domain.auth.dto.LoginRequest;
+import com.team10.backend.domain.auth.dto.LoginResult;
+import com.team10.backend.domain.auth.service.AuthService;
 import com.team10.backend.domain.auth.service.RefreshTokenService;
-import com.team10.backend.domain.user.dto.AuthRegisterRequest;
-import com.team10.backend.domain.user.dto.AuthRegisterResponse;
-import com.team10.backend.domain.user.dto.DuplicateCheckResponse;
-import com.team10.backend.domain.user.dto.LoginRequest;
-import com.team10.backend.domain.user.dto.LoginResult;
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.domain.user.enums.DuplicateType;
 import com.team10.backend.domain.user.enums.Role;
-import com.team10.backend.domain.user.repository.AuthRepository;
-import com.team10.backend.domain.user.service.AuthService;
+import com.team10.backend.domain.user.repository.UserRepository;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
 import com.team10.backend.global.security.TokenProvider;
@@ -39,7 +39,7 @@ import static org.mockito.Mockito.times;
 class AuthServiceTest {
 
     @Mock
-    private AuthRepository authRepository;
+    private UserRepository userRepository;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -67,12 +67,12 @@ class AuthServiceTest {
                 Role.BUYER
         );
 
-        given(authRepository.existsByEmail(request.email())).willReturn(false);
-        given(authRepository.existsByNickname(request.nickname())).willReturn(false);
+        given(userRepository.existsByEmail(request.email())).willReturn(false);
+        given(userRepository.existsByNickname(request.nickname())).willReturn(false);
         given(passwordEncoder.encode(request.password())).willReturn("encodedPassword");
 
         User user = User.create(request, "encodedPassword");
-        given(authRepository.save(any(User.class))).willReturn(user);
+        given(this.userRepository.save(any(User.class))).willReturn(user);
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
 
@@ -80,10 +80,10 @@ class AuthServiceTest {
         AuthRegisterResponse response = authService.register(request);
 
         // then
-        then(authRepository).should(times(1)).existsByEmail(request.email());
-        then(authRepository).should(times(1)).existsByNickname(request.nickname());
+        then(this.userRepository).should(times(1)).existsByEmail(request.email());
+        then(this.userRepository).should(times(1)).existsByNickname(request.nickname());
         then(passwordEncoder).should(times(1)).encode(request.password());
-        then(authRepository).should(times(1)).save(userCaptor.capture());
+        then(this.userRepository).should(times(1)).save(userCaptor.capture());
 
         User savedUser = userCaptor.getValue();
 
@@ -107,7 +107,7 @@ class AuthServiceTest {
                 Role.BUYER
         );
 
-        given(authRepository.existsByEmail(request.email())).willReturn(true);
+        given(userRepository.existsByEmail(request.email())).willReturn(true);
 
         // when & then
         BusinessException ex = assertThrows(BusinessException.class,
@@ -115,8 +115,8 @@ class AuthServiceTest {
 
         assertEquals(ErrorCode.DUPLICATE_EMAIL, ex.getErrorCode());
 
-        then(authRepository).should(times(1)).existsByEmail(request.email());
-        then(authRepository).should(never()).save(any());
+        then(userRepository).should(times(1)).existsByEmail(request.email());
+        then(userRepository).should(never()).save(any());
         then(passwordEncoder).should(never()).encode(any());
     }
 
@@ -134,8 +134,8 @@ class AuthServiceTest {
                 Role.BUYER
         );
 
-        given(authRepository.existsByEmail(request.email())).willReturn(false);
-        given(authRepository.existsByNickname(request.nickname())).willReturn(true);
+        given(userRepository.existsByEmail(request.email())).willReturn(false);
+        given(userRepository.existsByNickname(request.nickname())).willReturn(true);
 
         // when & then
         BusinessException ex = assertThrows(BusinessException.class,
@@ -143,7 +143,7 @@ class AuthServiceTest {
 
         assertEquals(ErrorCode.DUPLICATE_NICKNAME, ex.getErrorCode());
 
-        then(authRepository).should(never()).save(any());
+        then(userRepository).should(never()).save(any());
         then(passwordEncoder).should(never()).encode(any());
     }
 
@@ -151,7 +151,7 @@ class AuthServiceTest {
     @DisplayName("중복 확인 - 이메일 사용 가능")
     void checkDuplicate_email_available() {
         // given
-        given(authRepository.existsByEmail("user@example.com")).willReturn(false);
+        given(userRepository.existsByEmail("user@example.com")).willReturn(false);
 
         // when
         DuplicateCheckResponse response = authService.checkDuplicate(DuplicateType.EMAIL, "user@example.com");
@@ -166,7 +166,7 @@ class AuthServiceTest {
     @DisplayName("중복 확인 - 이메일 사용 불가")
     void checkDuplicate_email_unavailable() {
         // given
-        given(authRepository.existsByEmail("user@example.com")).willReturn(true);
+        given(userRepository.existsByEmail("user@example.com")).willReturn(true);
 
         // when
         DuplicateCheckResponse response = authService.checkDuplicate(DuplicateType.EMAIL, "user@example.com");
@@ -188,7 +188,7 @@ class AuthServiceTest {
                         .role(Role.BUYER)
                         .build();
 
-        given(authRepository.findByEmail(request.email())).willReturn(Optional.of(user));
+        given(this.userRepository.findByEmail(request.email())).willReturn(Optional.of(user));
         given(passwordEncoder.matches(request.password(), user.getPassword()))
                             .willReturn(true);
         given(tokenProvider.generateToken(user.getId(), user.getRole())).willReturn("test-access-token");
@@ -216,7 +216,7 @@ class AuthServiceTest {
                 .role(Role.BUYER)
                 .build();
 
-        given(authRepository.findByEmail(request.email())).willReturn(Optional.of(user));
+        given(this.userRepository.findByEmail(request.email())).willReturn(Optional.of(user));
         given(passwordEncoder.matches(request.password(), user.getPassword())).willReturn(false);
 
         // when & then
@@ -228,6 +228,5 @@ class AuthServiceTest {
         then(tokenProvider).should(never()).generateToken(any(), any());
         then(refreshTokenService).should(never()).createRefreshToken(any());
     }
-
 
 }

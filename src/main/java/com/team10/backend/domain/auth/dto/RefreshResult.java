@@ -1,4 +1,4 @@
-package com.team10.backend.domain.user.dto;
+package com.team10.backend.domain.auth.dto;
 
 public record RefreshResult(
         String accessToken,

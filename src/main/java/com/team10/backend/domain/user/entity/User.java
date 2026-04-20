@@ -1,6 +1,6 @@
 package com.team10.backend.domain.user.entity;
 
-import com.team10.backend.domain.user.dto.AuthRegisterRequest;
+import com.team10.backend.domain.auth.dto.AuthRegisterRequest;
 import com.team10.backend.domain.user.enums.Role;
 import com.team10.backend.domain.user.enums.UserStatus;
 import com.team10.backend.global.entity.BaseEntity;

@@ -1,4 +1,4 @@
-package com.team10.backend.domain.user.dto;
+package com.team10.backend.domain.auth.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
