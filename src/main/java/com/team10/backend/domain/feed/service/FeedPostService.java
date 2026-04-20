@@ -11,6 +11,7 @@ import com.team10.backend.domain.feed.entity.FeedLike;
 import com.team10.backend.domain.feed.entity.FeedPost;
 import com.team10.backend.domain.feed.repository.FeedLikeRepository;
 import com.team10.backend.domain.feed.repository.FeedPostRepository;
+import com.team10.backend.domain.image.service.ImageUploadService;
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.domain.user.enums.Role;
 import com.team10.backend.domain.user.repository.UserRepository;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +32,7 @@ public class FeedPostService {
     private final FeedPostRepository feedPostRepository;
     private final FeedLikeRepository feedLikeRepository;
     private final UserRepository userRepository;
+    private final ImageUploadService imageUploadService;
 
     // 비로그인 조회도 허용하되, 로그인 유저라면 좋아요 여부를 함께 계산한다.
     public FeedListResponseDto getFeedsList(Long sellerId, Long currentUserId) {
@@ -82,12 +85,17 @@ public class FeedPostService {
     ) {
         FeedPost feedPost = getAuthorizedFeedPost(currentUserId, feedId);
 
-        String imageUrl = requestDto.mediaUrls() != null && !requestDto.mediaUrls().isEmpty()
+        String oldImageUrl = feedPost.getImageUrl();
+
+        String newImageUrl = requestDto.mediaUrls() != null && !requestDto.mediaUrls().isEmpty()
                 ? requestDto.mediaUrls().getFirst()
                 : "";
 
-        feedPost.update(imageUrl, requestDto.content());
-        feedPostRepository.flush();
+        if (!Objects.equals(oldImageUrl, newImageUrl)) {
+            imageUploadService.deleteIfManaged(oldImageUrl);
+        }
+
+        feedPost.update(newImageUrl, requestDto.content());
 
         return UpdateFeedResponseDto.from(feedPost);
     }
@@ -119,8 +127,8 @@ public class FeedPostService {
     public void deleteFeed(Long feedId, Long currentUserId) {
         FeedPost feedPost = getAuthorizedFeedPost(currentUserId, feedId);
 
+        imageUploadService.deleteIfManaged(feedPost.getImageUrl());
         feedPostRepository.delete(feedPost);
-        feedPostRepository.flush();
     }
 
     // 피드를 조회하고 없으면 예외를 던진다.

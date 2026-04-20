@@ -25,3 +25,7 @@ logging:
     org.hibernate.orm.jdbc.bind: trace
     org.hibernate.orm.jdbc.extract: trace
     org.springframework.transaction.interceptor: trace
+
+custom:
+  jwt:
+    secretKey: ${SECRET_KEY:RjnNJn0bpT1nvG1AgH2vbTOvkB1iMzlX3+Evusj2n/U=}
