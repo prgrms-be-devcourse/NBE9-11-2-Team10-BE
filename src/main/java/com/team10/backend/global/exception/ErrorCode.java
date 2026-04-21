@@ -27,6 +27,8 @@ public enum ErrorCode {
     PRODUCT_NOT_FOUND("PRODUCT_001", "상품을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     INSUFFICIENT_STOCK("PRODUCT_002", "재고가 부족합니다.", HttpStatus.BAD_REQUEST),
     PRODUCT_ALREADY_INACTIVE("PRODUCT_003", "이미 비활성화된 상품입니다.", HttpStatus.CONFLICT),
+    INVALID_STOCK("PRODUCT_004", "재고는 0 이상이어야 합니다.", HttpStatus.BAD_REQUEST),
+    INVALID_STOCK_QUANTITY("PRODUCT_005", "증감 수량은 0 이하일 수 없습니다.", HttpStatus.BAD_REQUEST),
 
     // === 피드 도메인 (4000~4999) ===
     FEED_NOT_FOUND("FEED_001", "피드를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),

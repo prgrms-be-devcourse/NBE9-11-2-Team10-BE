@@ -4,6 +4,8 @@ import com.team10.backend.domain.product.enums.ProductStatus;
 import com.team10.backend.domain.product.enums.ProductType;
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.global.entity.BaseEntity;
+import com.team10.backend.global.exception.BusinessException;
+import com.team10.backend.global.exception.ErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -50,7 +52,16 @@ public class Product extends BaseEntity {
     private ProductStatus status;
 
 
-    public Product(User user, ProductType type, String productName, String description, int price, int stock, String imageUrl) {
+    public Product(
+            User user,
+            ProductType type,
+            String productName,
+            String description,
+            int price,
+            int stock,
+            String imageUrl
+    ) {
+        validateStock(stock);
         this.user = user;
         this.type = type;
         this.productName = productName;
@@ -58,11 +69,7 @@ public class Product extends BaseEntity {
         this.price = price;
         this.stock = stock;
         this.imageUrl = imageUrl;
-        this.status = ProductStatus.SELLING;
-    }
-
-    public void updateStatus(ProductStatus status) {
-        this.status = status;
+        this.status = (stock == 0) ? ProductStatus.SOLD_OUT : ProductStatus.SELLING;
     }
 
     public void update(
@@ -82,10 +89,57 @@ public class Product extends BaseEntity {
     }
 
     public void updateStock(int stock) {
-        this.stock = stock;
+        validateStock(stock);
+        applyStock(stock);
+    }
+
+    public void decreaseStock(int quantity) {
+        validateQuantity(quantity);
+        validateActive();
+
+        if (this.stock < quantity) {
+            throw new BusinessException(ErrorCode.INSUFFICIENT_STOCK);
+        }
+
+        applyStock(this.stock - quantity);
+    }
+
+    public void increaseStock(int quantity) {
+        validateQuantity(quantity);
+        validateActive();
+
+        applyStock(this.stock + quantity);
     }
 
     public void inactivate() {
         this.status = ProductStatus.INACTIVE;
+    }
+
+    private void applyStock(int stock) {
+        this.stock = stock;
+        updateStatusByStock();
+    }
+
+    private void validateActive() {
+        if (this.status == ProductStatus.INACTIVE) {
+            throw new BusinessException(ErrorCode.PRODUCT_ALREADY_INACTIVE);
+        }
+    }
+
+    private void updateStatusByStock() {
+        if (this.status == ProductStatus.INACTIVE) return;
+        this.status = (this.stock == 0) ? ProductStatus.SOLD_OUT : ProductStatus.SELLING;
+    }
+
+    private void validateStock(int stock) {
+        if (stock < 0) {
+            throw new BusinessException(ErrorCode.INVALID_STOCK);
+        }
+    }
+
+    private void validateQuantity(int quantity) {
+        if (quantity <= 0) {
+            throw new BusinessException(ErrorCode.INVALID_STOCK_QUANTITY);
+        }
     }
 }
