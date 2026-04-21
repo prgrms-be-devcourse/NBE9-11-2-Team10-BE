@@ -8,8 +8,6 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
@@ -55,19 +53,13 @@ public class TokenProvider {
 
     public Authentication getAuthentication(String token) {
         Claims claims = parseClaims(token);
-        String userId = claims.getSubject();
-        String role = claims.get(CLAIMS_ROLE, String.class);
-
-        UserDetails userDetails = new User(
-                userId,
-                null,
-                List.of(new SimpleGrantedAuthority("ROLE_" + role))
-        );
+        Long userId = Long.parseLong(claims.getSubject());
+        Role role = Role.valueOf(claims.get(CLAIMS_ROLE, String.class));
 
         return new UsernamePasswordAuthenticationToken(
-                userDetails,
+                new CustomUserPrincipal(userId, role),
                 null,
-                userDetails.getAuthorities()
+                List.of(new SimpleGrantedAuthority("ROLE_" + role.name()))
         );
     }
 }
