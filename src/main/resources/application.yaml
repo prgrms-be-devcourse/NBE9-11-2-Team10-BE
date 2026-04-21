@@ -10,6 +10,11 @@ spring:
     problemdetails:
       enabled: true
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
   web:
     resources:
       add-mappings: false
@@ -22,3 +27,9 @@ custom:
   jwt:
     secretKey: ${SECRET_KEY}
     expireTime: 15
+
+cloud:
+  aws:
+    region: ${AWS_REGION:ap-northeast-2}
+    s3:
+      bucket: ${AWS_S3_BUCKET:}

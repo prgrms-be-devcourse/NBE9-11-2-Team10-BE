@@ -12,6 +12,9 @@ public enum ErrorCode {
     INTERNAL_SERVER_ERROR("COMMON_001", "서버 내부 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_INPUT("COMMON_002", "입력값이 올바르지 않습니다.", HttpStatus.BAD_REQUEST),
     ACCESS_DENIED("COMMON_003", "해당 리소스에 대한 접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
+    FILE_UPLOAD_FAILED("COMMON_004", "파일 업로드에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
+    INVALID_IMAGE_FILE("COMMON_005", "이미지 파일만 업로드할 수 있습니다.", HttpStatus.BAD_REQUEST),
+    FILE_DELETE_FAILED("COMMON_006", "파일 삭제에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
 
     // === 사용자 도메인 (2000~2999) ===
     USER_NOT_FOUND("USER_001", "회원을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
