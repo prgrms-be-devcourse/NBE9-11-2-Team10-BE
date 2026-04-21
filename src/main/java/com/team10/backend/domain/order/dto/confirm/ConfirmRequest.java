@@ -4,6 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public record ConfirmRequest(
         String paymentKey,
-         String orderNumber,
-        Long totalAmout
+        String orderId,
+        Long amount
 ) {}

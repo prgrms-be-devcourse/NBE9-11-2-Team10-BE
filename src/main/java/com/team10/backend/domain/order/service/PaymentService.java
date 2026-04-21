@@ -10,6 +10,7 @@ import com.team10.backend.domain.order.repository.OrderRepository;
 import com.team10.backend.domain.order.repository.PaymentRepository;
 import com.team10.backend.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,7 @@ import static com.team10.backend.global.exception.ErrorCode.*;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
@@ -27,17 +29,18 @@ public class PaymentService {
     @Transactional
     public TossConfirmResponse confirmPayment(ConfirmRequest request) {
         // 1. 비즈니스 검증: DB의 금액과 요청 금액 비교 , 주문 생성시에
-        Payment payment = paymentRepository.findByOrderNumber(request.orderNumber())
+        log.info("조회 시도 - request.orderId: [{}]", request.orderId());
+        Payment payment = paymentRepository.findByOrderNumber(request.orderId())
                 .orElseThrow(() -> new BusinessException(PAYMENT_NOT_FOUND));
 
-        Order order = orderRepository.findByOrderNumber(request.orderNumber())
+        Order order = orderRepository.findByOrderNumber(request.orderId())
                 .orElseThrow(() -> new BusinessException(ORDER_NOT_FOUND));
 
         OrderDelivery delivery = orderDeliveryRepository.findById(order.getId())
                 .orElseThrow(() -> new BusinessException(DELIVERY_NOT_FOUND));
 
         //프론트에서 금액을 위조했을 경우
-        if (payment.getTotalAmount()!=request.totalAmout()) {
+        if (payment.getTotalAmount()!=request.amount()) {
             throw new BusinessException(AMOUNT_MISMATCH);
         }
 
@@ -46,14 +49,23 @@ public class PaymentService {
         TossConfirmResponse response = orderConfirmService.sendConfirmRequest(request,null);
 
         // 3. 결제 성공 후 상태 변경 (후처리)
-        completePayment(payment, request.paymentKey());
-        updateOrderStatus(order);
-        startReady(delivery);
+        statusChangeAfterSuccess(payment,request.paymentKey(),order,delivery);
 
         return response;
     }
 
+    public void statusChangeAfterSuccess(Payment payment, String paymentKey, Order order, OrderDelivery delivery) {
+        completePayment(payment, paymentKey);
+        updateOrderStatus(order);
+        startReady(delivery);
+
+         paymentRepository.save(payment);
+         orderRepository.save(order);
+        orderDeliveryRepository.save(delivery);
+    }
+
     private void completePayment(Payment payment, String paymentKey) {
+        log.info("결제 완료 처리 시작: {}", paymentKey);
         payment.completePayment(paymentKey);
     }
 

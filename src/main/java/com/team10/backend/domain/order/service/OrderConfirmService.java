@@ -56,7 +56,12 @@ public class OrderConfirmService {
         String encodedKey = Base64.getEncoder().encodeToString((secretKey + ":").getBytes());
         //todo 네트워크가 끊겼을때 다시 시도할 경우 같은 orderNumber 키로 접근하면 오류가 발생한다.
         //그래서 orderNumber 뒤에 숫자를 붙여서 새로운 값을 사용. 그 값은 DB에 저장되어야 한다.(필드에 추가)
-        headers.set("Idempotency-Key", request.orderNumber() + (testCode != null ? UUID.randomUUID() : ""));
+        int attempt = RetrySynchronizationManager.getContext() != null
+                ? RetrySynchronizationManager.getContext().getRetryCount()
+                : 0;
+        String idempotencyKey = request.orderId() + "-v" + attempt;
+
+        headers.set("Idempotency-Key", idempotencyKey+ (testCode != null ? UUID.randomUUID() : ""));
         headers.set("Authorization", "Basic " + encodedKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
@@ -64,11 +69,13 @@ public class OrderConfirmService {
 
         try {
             ResponseEntity<TossConfirmResponse> response = restTemplate.postForEntity(TOSS_URL + "/confirm", entity, TossConfirmResponse.class);
+            log.info("응답값 확인 {},{}",response,response.getBody());
             return response.getBody();
         } catch (HttpClientErrorException e) {
             // 비즈니스 로직 에러 (4xx)
             // 사용자의 잔액 부족, 카드 정보 오류 등
             String errorBody = e.getResponseBodyAsString();
+            log.info("에러 바디 확인: {}", errorBody); // 추가
             handleBusinessError(e.getStatusCode(), errorBody);
             return null; // unreachable (예외가 던져짐)
 
@@ -91,9 +98,9 @@ public class OrderConfirmService {
 
     // 최종적으로 사용자에게 실패 응답을 던지거나,
     @Recover
-    public TossConfirmResponse recover(Exception e, ConfirmRequest request, String errorCode,String idempotencyKey) {
+    public TossConfirmResponse recover(ResourceAccessException e, ConfirmRequest request,String testCode) {
        log.error("결제 승인 최종 실패 - 모든 재시도 소진. 주문번호: {}, 에러: {}",
-                request.orderNumber(), e.getMessage());
+                request.orderId(), e.getMessage());
 
        //todo 관리자에게 알람
         // 네트워크 장애 시: "결제 확인 중" 상태로 변경하거나 관리자 알림
