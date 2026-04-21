@@ -79,4 +79,10 @@ public class User extends BaseEntity {
         sellerInfo.linkUser(this);
     }
 
+    public void updateUserInfo(String nickname, String phoneNumber, String address) {
+        this.nickname = nickname;
+        this.phoneNumber = phoneNumber;
+        this.address = address;
+    }
+
 }

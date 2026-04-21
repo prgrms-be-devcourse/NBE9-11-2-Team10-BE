@@ -21,6 +21,7 @@ public enum ErrorCode {
     DUPLICATE_EMAIL("USER_002", "이미 사용 중인 이메일입니다.", HttpStatus.CONFLICT),
     DUPLICATE_NICKNAME("USER_003", "이미 사용 중인 닉네임입니다.", HttpStatus.CONFLICT),
     LOGIN_FAILED("USER_004", "아이디 또는 비밀번호가 일치하지 않습니다.", HttpStatus.NOT_FOUND),
+    NOT_SELLER("USER_005", "판매자가 아닙니다.", HttpStatus.FORBIDDEN),
 
     // === 상품 도메인 (3000~3999) ===,
     PRODUCT_NOT_FOUND("PRODUCT_001", "상품을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),

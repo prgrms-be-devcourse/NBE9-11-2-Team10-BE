@@ -20,7 +20,7 @@ public class SellerInfo extends BaseEntity {
     @JoinColumn(name = "user_id", unique = true)
     private User user;
 
-    @Column()
+    @Column(length = 500)
     private String bio;
 
     @Column(name = "business_number", unique = true)
@@ -28,6 +28,11 @@ public class SellerInfo extends BaseEntity {
 
     public void linkUser(User user) {
         this.user = user;
+    }
+
+    public void updateSellerInfo(String bio, String businessNumber) {
+        this.bio = bio;
+        this.businessNumber = businessNumber;
     }
 
 }
