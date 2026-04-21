@@ -1,4 +1,4 @@
-package com.team10.backend.domain.user.integration;
+package com.team10.backend.domain.auth.integration;
 
 import com.team10.backend.domain.auth.controller.AuthController;
 import com.team10.backend.domain.auth.dto.AuthRegisterRequest;
