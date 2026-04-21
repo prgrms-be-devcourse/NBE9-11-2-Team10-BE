@@ -16,14 +16,17 @@ import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.domain.user.repository.UserRepository;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -54,16 +57,31 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public ProductPageResponse list(int page, int size, ProductType type, ProductStatus status) {
+    public ProductPageResponse list(int page, int size, ProductType type, ProductStatus status, Long sellerId) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        Page<Product> productPage;
+        Specification<Product> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
 
-        if (type != null && status != null) productPage = productRepository.findByTypeAndStatus(type, status, pageable);
-        else if (type != null) productPage = productRepository.findByType(type, pageable);
-        else if (status != null) productPage = productRepository.findByStatus(status, pageable);
-        else productPage = productRepository.findByStatusNot(ProductStatus.INACTIVE, pageable);
+            if (type != null) {
+                predicates.add(cb.equal(root.get("type"), type));
+            }
+
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
+            } else {
+                predicates.add(cb.notEqual(root.get("status"), ProductStatus.INACTIVE));
+            }
+
+            if (sellerId != null) {
+                predicates.add(cb.equal(root.get("user").get("id"), sellerId));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<Product> productPage = productRepository.findAll(spec, pageable);
 
         List<ProductListResponse> content = productPage.getContent()
                 .stream()

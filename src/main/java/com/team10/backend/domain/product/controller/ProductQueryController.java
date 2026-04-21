@@ -33,9 +33,10 @@ public class ProductQueryController {
             @RequestParam(defaultValue = "0") @Min(value = 0, message = "page는 0 이상이어야 합니다.") int page,
             @RequestParam(defaultValue = "10") @Min(value = 1, message = "size는 1 이상이어야 합니다.") int size,
             @RequestParam(required = false) ProductType type,
-            @RequestParam(required = false) ProductStatus status
+            @RequestParam(required = false) ProductStatus status,
+            @RequestParam(required = false) Long sellerId
     ) {
-        ProductPageResponse response = productService.list(page, size, type, status);
+        ProductPageResponse response = productService.list(page, size, type, status, sellerId);
         return ApiResponse.ok(response);
     }
 

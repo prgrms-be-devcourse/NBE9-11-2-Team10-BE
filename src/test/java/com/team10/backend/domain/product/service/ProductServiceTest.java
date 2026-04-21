@@ -3,6 +3,7 @@ package com.team10.backend.domain.product.service;
 import com.team10.backend.domain.product.dto.ProductCreateRequest;
 import com.team10.backend.domain.product.dto.ProductDetailResponse;
 import com.team10.backend.domain.product.dto.ProductInactiveResponse;
+import com.team10.backend.domain.product.dto.ProductListResponse;
 import com.team10.backend.domain.product.dto.ProductPageResponse;
 import com.team10.backend.domain.product.dto.ProductStockRequest;
 import com.team10.backend.domain.product.dto.ProductStockResponse;
@@ -113,7 +114,7 @@ class ProductServiceTest {
         productRepository.save(new Product(user, ProductType.BOOK, "책1", "설명1", 10000, 10, null));
         productRepository.save(new Product(user, ProductType.BOOK, "책2", "설명2", 20000, 20, null));
 
-        ProductPageResponse response = productService.list(0, 10, null, null);
+        ProductPageResponse response = productService.list(0, 10, null, null, null);
 
         assertThat(response.content()).hasSize(2);
         assertThat(response.page()).isEqualTo(0);
@@ -130,7 +131,7 @@ class ProductServiceTest {
         productRepository.save(new Product(user, ProductType.BOOK, "책1", "설명1", 10000, 10, null));
         productRepository.save(new Product(user, ProductType.EBOOK, "굿즈1", "설명2", 20000, 20, null));
 
-        ProductPageResponse response = productService.list(0, 10, ProductType.BOOK, null);
+        ProductPageResponse response = productService.list(0, 10, ProductType.BOOK, null, null);
 
         assertThat(response.content()).hasSize(1);
         assertThat(response.content().get(0).productName()).isEqualTo("책1");
@@ -148,7 +149,7 @@ class ProductServiceTest {
         inactiveProduct.updateStatus(ProductStatus.INACTIVE);
         productRepository.save(inactiveProduct);
 
-        ProductPageResponse response = productService.list(0, 10, null, ProductStatus.SELLING);
+        ProductPageResponse response = productService.list(0, 10, null, ProductStatus.SELLING, null);
 
         assertThat(response.content()).hasSize(1);
         assertThat(response.content().get(0).productName()).isEqualTo("책1");
@@ -168,7 +169,7 @@ class ProductServiceTest {
 
         productRepository.save(new Product(user, ProductType.EBOOK, "전자책1", "설명3", 20000, 20, null));
 
-        ProductPageResponse response = productService.list(0, 10, ProductType.BOOK, ProductStatus.SELLING);
+        ProductPageResponse response = productService.list(0, 10, ProductType.BOOK, ProductStatus.SELLING, null);
 
         assertThat(response.content()).hasSize(1);
         assertThat(response.content().get(0).productName()).isEqualTo("책1");
@@ -448,5 +449,39 @@ class ProductServiceTest {
         assertThatThrownBy(() -> productService.updateStock(2L, savedProduct.getId(), request))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.ACCESS_DENIED.getMessage());
+    }
+
+    @Test
+    @DisplayName("sellerId로 상품 필터링")
+    void list_withSellerId_filters() {
+        User seller = userRepository.findById(1L).orElseThrow();
+        User anotherSeller = userRepository.findById(2L).orElseThrow();
+
+        productRepository.save(new Product(
+                seller,
+                ProductType.BOOK,
+                "seller 상품",
+                "설명",
+                10000,
+                10,
+                "https://example.com/seller.jpg"
+        ));
+
+        productRepository.save(new Product(
+                anotherSeller,
+                ProductType.BOOK,
+                "다른 판매자 상품",
+                "설명",
+                12000,
+                10,
+                "https://example.com/another.jpg"
+        ));
+
+        ProductPageResponse response = productService.list(0, 10, null, null, seller.getId());
+
+        assertThat(response.content()).isNotEmpty();
+        assertThat(response.content())
+                .extracting(ProductListResponse::sellerId)
+                .containsOnly(seller.getId());
     }
 }

@@ -10,7 +10,8 @@ public record ProductListResponse(
         int price,
         String imageUrl,
         ProductType type,
-        ProductStatus status
+        ProductStatus status,
+        Long sellerId
 ) {
     public static ProductListResponse from(Product product) {
         return new ProductListResponse(
@@ -19,7 +20,8 @@ public record ProductListResponse(
                 product.getPrice(),
                 product.getImageUrl(),
                 product.getType(),
-                product.getStatus()
+                product.getStatus(),
+                product.getUser().getId()
         );
     }
 }
