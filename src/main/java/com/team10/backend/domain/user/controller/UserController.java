@@ -8,6 +8,7 @@ import com.team10.backend.domain.user.dto.UserUpdateRequest;
 import com.team10.backend.domain.user.service.UserService;
 import com.team10.backend.global.dto.ApiResponse;
 import com.team10.backend.global.security.CustomUserPrincipal;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,9 @@ public class UserController {
 
     @GetMapping("/users/me")
     @PreAuthorize("hasRole('BUYER')")
+    @Operation(
+            summary = "내 사용자 프로필 조회",
+            description = "로그인한 BUYER 본인의 프로필 정보를 조회합니다.")
     public ApiResponse<UserResponse> getUserProfile(
             @AuthenticationPrincipal CustomUserPrincipal principal
     ) {
@@ -40,6 +44,9 @@ public class UserController {
 
     @GetMapping("/sellers/me")
     @PreAuthorize("hasRole('SELLER')")
+    @Operation(
+            summary = "내 판매자 프로필 조회",
+            description = "로그인한 SELLER 본인의 프로필 정보를 조회합니다.")
     public ApiResponse<SellerResponse> getSellerProfile(
             @AuthenticationPrincipal CustomUserPrincipal principal
     ) {
@@ -49,6 +56,9 @@ public class UserController {
     }
 
     @GetMapping("/sellers/{id}")
+    @Operation(
+            summary = "판매자 공개 프로필 조회",
+            description = "특정 판매자의 공개 프로필 정보를 조회합니다.")
     public ApiResponse<SellerPublicResponse> getSellerPublicProfile(
             @PathVariable Long id
     ) {
@@ -59,6 +69,9 @@ public class UserController {
 
     @PutMapping("/users/me")
     @PreAuthorize("hasRole('BUYER')")
+    @Operation(
+            summary = "내 사용자 프로필 수정",
+            description = "로그인한 BUYER 본인의 프로필 정보를 수정합니다.")
     public ApiResponse<UserResponse> updateMyUserProfile(
             @AuthenticationPrincipal CustomUserPrincipal principal,
             @Valid @RequestBody UserUpdateRequest request
@@ -70,6 +83,9 @@ public class UserController {
 
     @PutMapping("/sellers/me")
     @PreAuthorize("hasRole('SELLER')")
+    @Operation(
+            summary = "내 판매자 프로필 수정",
+            description = "로그인한 SELLER 본인의 프로필 정보를 수정합니다.")
     public ApiResponse<SellerResponse> updateMySellerProfile(
             @AuthenticationPrincipal CustomUserPrincipal principal,
             @Valid @RequestBody SellerUpdateRequest request
