@@ -2,16 +2,20 @@ package com.team10.backend.domain.order.controller;
 
 import com.team10.backend.domain.order.dto.OrderCreateRequest;
 import com.team10.backend.domain.order.dto.OrderDeleteResponse;
+import com.team10.backend.domain.order.dto.confirm.ConfirmRequest;
+import com.team10.backend.domain.order.dto.confirm.TossConfirmResponse;
 import com.team10.backend.domain.order.dto.search.OrderDetailResponse;
 import com.team10.backend.domain.order.dto.search.buyer.OrderListResponse;
 import com.team10.backend.domain.order.dto.OrderResponse;
 import com.team10.backend.domain.order.dto.search.seller.SellerOrderListResponse;
 import com.team10.backend.domain.order.service.OrderService;
+import com.team10.backend.domain.order.service.PaymentService;
 import com.team10.backend.global.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,11 +28,14 @@ import java.security.Principal;
 public class OrderController {
 
     private final OrderService orderService;
+    private final PaymentService paymentService;
 
-    //Todo 주문 검증
-    //  주문 상태 업데이트 (PENDING -> SUCCESS)
-    //  결제 상태 업데이트 (READY -> PAID)(엔티티 내 구현)
-    //  배송 상태 업데이트 (null -> READY)(")
+    @PostMapping("/confirm")
+    @Operation(summary = "주문 검증", description = "상품을 구매할때 토스 페이먼트 api를 호출하여 검증합니다.")
+    public ApiResponse<TossConfirmResponse> confirmPayment(@RequestBody ConfirmRequest request) {
+        TossConfirmResponse response = paymentService.confirmPayment(request);
+        return ApiResponse.ok(response);
+    }
 
     @PostMapping
     @Operation(summary = "주문 등록", description = "구매자가 상품을 구매할때 주문을 생성합니다.")
