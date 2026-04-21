@@ -43,8 +43,9 @@ public class OrderConfirmService {
 
         // 시크릿 키 인증 헤더 설정
         String encodedKey = Base64.getEncoder().encodeToString((secretKey + ":").getBytes());
-//        headers.set("Idempotency-Key", request.orderId());
-        headers.set("Idempotency-Key", UUID.randomUUID().toString());
+        //todo 네트워크가 끊겼을때 다시 시도할 경우 같은 orderNumber 키로 접근하면 오류가 발생한다.
+        //그래서 orderNumber 뒤에 숫자를 붙여서 새로운 값을 사용. 그 값은 DB에 저장되어야 한다.(필드에 추가)
+        headers.set("Idempotency-Key", request.orderNumber() + (testCode != null ? UUID.randomUUID() : ""));
         headers.set("Authorization", "Basic " + encodedKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
@@ -71,8 +72,7 @@ public class OrderConfirmService {
         } catch (ResourceAccessException e) {
             // [네트워크 에러] - 타임아웃, 커넥션 거부 등
             //todo 1. 재시도 로직
-            //2. timeout GET 토스 조회 로직을 통해 현재 BE DB랑 정합성 비교
-            //3. WEBhook을 사용
+            //2. WEBhook을 사용
 
             log.error("네트워크 통신 실패: {}", e.getMessage());
 //            throw new BusinessException(ErrorCode.NETWORK_ERROR, "결제 서버와 통신이 원활하지 않습니다.");
@@ -82,6 +82,8 @@ public class OrderConfirmService {
 
     private void handleBusinessError(HttpStatusCode status, String errorBody) {
         String errorCode = parseErrorCode(errorBody);
+
+        log.error("토스페이먼츠 4xx 에러 발생 - Status: {}, Code: {}", status, errorCode);
 
         //404
         if (status.equals(HttpStatus.NOT_FOUND)) {
@@ -106,8 +108,6 @@ public class OrderConfirmService {
                     throw new BusinessException(FORBIDDEN_REQUEST);
                 case "INVALID_PASSWORD":
                     throw new BusinessException(INVALID_PASSWORD);
-//              default:
-//                    throw new BusinessException(ErrorCode.BAD_REQUEST, "결제 취소 요청이 거절되었습니다: " + errorCode);
             }
         }
 
@@ -140,10 +140,10 @@ public class OrderConfirmService {
     }
 
     private void handleSystemError(HttpStatusCode status, String errorBody) {
-        // JSON 파싱을 통해 토스의 "code"와 "message" 추출 (Jackson 등 이용)
+        // JSON 파싱을 통해 토스의 code와 message 추출
         String errorCode = parseErrorCode(errorBody);
 
-        log.error("토스페이먼츠 에러 발생 - Status: {}, Code: {}", status, errorCode);
+        log.error("토스페이먼츠 5xx 에러 발생 - Status: {}, Code: {}", status, errorCode);
 
         // 3. 토스 서버 및 은행 점검 문제 (500 계열)
         if (status.is5xxServerError()) {
