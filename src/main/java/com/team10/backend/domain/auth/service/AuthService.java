@@ -6,8 +6,10 @@ import com.team10.backend.domain.auth.dto.DuplicateCheckResponse;
 import com.team10.backend.domain.auth.dto.LoginRequest;
 import com.team10.backend.domain.auth.dto.LoginResponse;
 import com.team10.backend.domain.auth.dto.LoginResult;
+import com.team10.backend.domain.user.entity.SellerInfo;
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.domain.user.enums.DuplicateType;
+import com.team10.backend.domain.user.enums.Role;
 import com.team10.backend.domain.user.repository.UserRepository;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
@@ -16,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import static com.team10.backend.global.exception.ErrorCode.INVALID_INPUT;
 import static com.team10.backend.global.exception.ErrorCode.LOGIN_FAILED;
@@ -35,7 +38,15 @@ public class AuthService {
 
         String encodedPassword = passwordEncoder.encode(request.password());
 
-        User user = User.create(request, encodedPassword);
+        Role role = request.role();
+
+        User user = User.create(request, encodedPassword, role);
+
+        if(role == Role.SELLER) {
+            SellerInfo sellerInfo = new SellerInfo();
+            user.attachSellerInfo(sellerInfo);
+        }
+
         User savedUser = userRepository.save(user);
 
         return AuthRegisterResponse.from(savedUser);
@@ -52,7 +63,7 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public DuplicateCheckResponse checkDuplicate(DuplicateType type, String value) {
-        if (value == null || value.isBlank()) {
+        if (!StringUtils.hasText(value)) {
             throw new BusinessException(INVALID_INPUT);
         }
         value = value.trim().toLowerCase();
