@@ -267,7 +267,7 @@ public class FeedPostServiceTest {
                 2L
         );
 
-        assertThat(result.isLiked()).isTrue();
+        assertThat(result.liked()).isTrue();
         assertThat(result.likeCount()).isEqualTo(1);
         assertThat(likeCount).isEqualTo(1);
         assertThat(feedLikeCount).isEqualTo(1);
@@ -310,7 +310,7 @@ public class FeedPostServiceTest {
                 2L
         );
 
-        assertThat(result.isLiked()).isFalse();
+        assertThat(result.liked()).isFalse();
         assertThat(result.likeCount()).isEqualTo(0);
         assertThat(likeCount).isEqualTo(0);
         assertThat(feedLikeCount).isEqualTo(0);

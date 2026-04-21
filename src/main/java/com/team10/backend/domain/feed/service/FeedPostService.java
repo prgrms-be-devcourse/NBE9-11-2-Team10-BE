@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +37,8 @@ public class FeedPostService {
 
     // 비로그인 조회도 허용하되, 로그인 유저라면 좋아요 여부를 함께 계산한다.
     public FeedListResponseDto getFeedsList(Long sellerId, Long currentUserId) {
-        List<FeedPost> feedPosts = feedPostRepository.findAllByUserIdOrderByCreatedAtDesc(sellerId);
+        List<FeedPost> feedPosts =
+                feedPostRepository.findAllByUserIdOrderByCreatedAtDesc(sellerId);
 
         if (feedPosts.isEmpty()) {
             throw new BusinessException(ErrorCode.FEED_NOT_FOUND);
@@ -45,14 +47,7 @@ public class FeedPostService {
         User currentUser = getNullableUser(currentUserId);
 
         List<FeedDto> feedDtos = feedPosts.stream()
-                .map(feed -> {
-                    boolean isLiked = false;
-                    if (currentUser != null) {
-                        isLiked = feed.getFeedLikes().stream()
-                                .anyMatch(like -> like.getUser().getId().equals(currentUser.getId()));
-                    }
-                    return FeedDto.from(feed, isLiked);
-                })
+                .map(feed -> toFeedDto(feed, currentUser))
                 .toList();
 
         return new FeedListResponseDto(feedDtos);
@@ -65,9 +60,7 @@ public class FeedPostService {
         validateSeller(currentUser);
 
         FeedPost feedPost = new FeedPost(
-                requestDto.mediaUrls() != null && !requestDto.mediaUrls().isEmpty()
-                    ? requestDto.mediaUrls().getFirst()
-                    : "",
+                extractThumbnailUrl(requestDto),
                 requestDto.content(),
                 currentUser
         );
@@ -87,9 +80,7 @@ public class FeedPostService {
 
         String oldImageUrl = feedPost.getImageUrl();
 
-        String newImageUrl = requestDto.mediaUrls() != null && !requestDto.mediaUrls().isEmpty()
-                ? requestDto.mediaUrls().getFirst()
-                : "";
+        String newImageUrl = extractThumbnailUrl(requestDto);
 
         if (!Objects.equals(oldImageUrl, newImageUrl)) {
             imageUploadService.deleteIfManaged(oldImageUrl);
@@ -101,25 +92,13 @@ public class FeedPostService {
     }
 
     @Transactional
-    // 좋아요는 로그인 유저라면 누구나 토글할 수 있다.
     public FeedLikeToggleResponseDto toggleFeedLike(Long feedId, Long currentUserId) {
         User currentUser = getUser(currentUserId);
-
         FeedPost feedPost = getFeedPost(feedId);
 
-        boolean isLiked = feedLikeRepository.findByFeedPostId_AndUser_Id(feedId, currentUser.getId())
-                .map(feedLike -> {
-                    feedLikeRepository.delete(feedLike);
-                    feedPost.decreaseLikeCount();
-                    return false;
-                })
-                .orElseGet(() -> {
-                    feedLikeRepository.save(new FeedLike(feedPost, currentUser));
-                    feedPost.increaseLikeCount();
-                    return true;
-                });
+        boolean liked = toggleLike(feedPost, currentUser);
 
-        return new FeedLikeToggleResponseDto(isLiked, feedPost.getLikeCount());
+        return new FeedLikeToggleResponseDto(liked, feedPost.getLikeCount());
     }
 
     @Transactional
@@ -176,5 +155,54 @@ public class FeedPostService {
         if (user.getRole() != Role.SELLER) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }
+    }
+
+    // 멀티 이미지 요청이 와도 대표 이미지로 첫 번째 URL만 사용한다.
+    private String extractThumbnailUrl(CreateFeedRequestDto requestDto) {
+        return requestDto.mediaUrls() != null && !requestDto.mediaUrls().isEmpty()
+                ? requestDto.mediaUrls().getFirst()
+                : "";
+    }
+
+    // 현재 로그인 사용자의 좋아요 여부를 포함해 FeedDto로 변환한다.
+    private FeedDto toFeedDto(FeedPost feed, User currentUser) {
+        boolean liked = isLiked(feed, currentUser);
+        return FeedDto.from(feed, liked);
+    }
+
+    // 비로그인 사용자는 false, 로그인 사용자는 좋아요 여부를 계산한다.
+    private boolean isLiked(FeedPost feed, User currentUser) {
+        if (currentUser == null) {
+            return false;
+        }
+
+        return feed.getFeedLikes().stream()
+                .anyMatch(like -> like.getUser().getId().equals(currentUser.getId()));
+    }
+
+    // 수정 요청에서도 대표 이미지로 첫 번째 URL만 사용한다.
+    private String extractThumbnailUrl(UpdateFeedRequestDto requestDto) {
+        return requestDto.mediaUrls() != null && !requestDto.mediaUrls().isEmpty()
+                ? requestDto.mediaUrls().getFirst()
+                : "";
+    }
+
+    // 좋아요가 이미 있으면 취소하고, 없으면 새로 생성한다.
+    private boolean toggleLike(FeedPost feedPost, User currentUser) {
+        Optional<FeedLike> existingLike =
+                feedLikeRepository.findByFeedPostId_AndUser_Id(
+                        feedPost.getId(),
+                        currentUser.getId()
+                );
+
+        if (existingLike.isPresent()) {
+            feedLikeRepository.delete(existingLike.get());
+            feedPost.decreaseLikeCount();
+            return false;
+        }
+
+        feedLikeRepository.save(new FeedLike(feedPost, currentUser));
+        feedPost.increaseLikeCount();
+        return true;
     }
 }

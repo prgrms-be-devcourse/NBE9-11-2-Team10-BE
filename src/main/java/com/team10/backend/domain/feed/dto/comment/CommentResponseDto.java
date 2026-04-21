@@ -4,7 +4,7 @@ import com.team10.backend.domain.feed.entity.FeedComment;
 import com.team10.backend.domain.user.entity.User;
 
 public record CommentResponseDto(
-        String commentId,
+        Long commentId,
         Writer writer,
         String content,
         int likeCount,
@@ -17,7 +17,7 @@ public record CommentResponseDto(
         boolean isMine = currentUser != null && comment.getWriter().getId().equals(currentUser.getId());
 
         return new CommentResponseDto(
-                String.valueOf(comment.getId()),
+                comment.getId(),
                 Writer.from(comment.getWriter()),
                 comment.getContent(),
                 comment.getLikeCount(),
@@ -29,13 +29,13 @@ public record CommentResponseDto(
     }
 
     public record Writer(
-            String userId,
+            Long userId,
             String nickname,
             String profileImageUrl
     ) {
         public static Writer from(User writer) {
             return new Writer(
-                    String.valueOf(writer.getId()),
+                    writer.getId(),
                     writer.getNickname(),
                     writer.getImageUrl()
             );
