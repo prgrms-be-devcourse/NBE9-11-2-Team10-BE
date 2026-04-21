@@ -9,6 +9,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
+import org.springframework.retry.support.RetrySynchronizationManager;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
@@ -33,8 +37,15 @@ public class OrderConfirmService {
     private final String TOSS_URL = "https://api.tosspayments.com/v1/payments";
     private final ObjectMapper objectMapper;
 
+    private final RestTemplate restTemplate;
+
+    // 1. 재시도 로직
+    @Retryable(
+            value = { ResourceAccessException.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     public TossConfirmResponse sendConfirmRequest(ConfirmRequest request,String testCode) {
-        RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
 
         if (testCode != null) {
@@ -48,7 +59,6 @@ public class OrderConfirmService {
         headers.set("Idempotency-Key", request.orderNumber() + (testCode != null ? UUID.randomUUID() : ""));
         headers.set("Authorization", "Basic " + encodedKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
-
 
         HttpEntity<ConfirmRequest> entity = new HttpEntity<>(request, headers);
 
@@ -71,13 +81,23 @@ public class OrderConfirmService {
 
         } catch (ResourceAccessException e) {
             // [네트워크 에러] - 타임아웃, 커넥션 거부 등
-            //todo 1. 재시도 로직
+            //1. 재시도 로직
             //2. WEBhook을 사용
-
             log.error("네트워크 통신 실패: {}", e.getMessage());
-//            throw new BusinessException(ErrorCode.NETWORK_ERROR, "결제 서버와 통신이 원활하지 않습니다.");
-            return null;
+            throw e;
         }
+    }
+
+
+    // 최종적으로 사용자에게 실패 응답을 던지거나,
+    @Recover
+    public TossConfirmResponse recover(Exception e, ConfirmRequest request, String errorCode,String idempotencyKey) {
+       log.error("결제 승인 최종 실패 - 모든 재시도 소진. 주문번호: {}, 에러: {}",
+                request.orderNumber(), e.getMessage());
+
+       //todo 관리자에게 알람
+        // 네트워크 장애 시: "결제 확인 중" 상태로 변경하거나 관리자 알림
+        throw new BusinessException(ErrorCode.NETWORK_ERROR_FINAL_FAILED);
     }
 
     private void handleBusinessError(HttpStatusCode status, String errorBody) {
