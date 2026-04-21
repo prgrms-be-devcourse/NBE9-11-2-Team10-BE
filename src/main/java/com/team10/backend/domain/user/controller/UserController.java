@@ -9,6 +9,7 @@ import com.team10.backend.domain.user.service.UserService;
 import com.team10.backend.global.dto.ApiResponse;
 import com.team10.backend.global.security.CustomUserPrincipal;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -60,7 +61,7 @@ public class UserController {
     @PreAuthorize("hasRole('BUYER')")
     public ApiResponse<UserResponse> updateMyUserProfile(
             @AuthenticationPrincipal CustomUserPrincipal principal,
-            @RequestBody UserUpdateRequest request
+            @Valid @RequestBody UserUpdateRequest request
     ) {
         UserResponse response = userService.updateMyUserProfile(principal.userId(), request);
 
@@ -71,7 +72,7 @@ public class UserController {
     @PreAuthorize("hasRole('SELLER')")
     public ApiResponse<SellerResponse> updateMySellerProfile(
             @AuthenticationPrincipal CustomUserPrincipal principal,
-            @RequestBody SellerUpdateRequest request
+            @Valid @RequestBody SellerUpdateRequest request
     ) {
         SellerResponse response = userService.updateMySellerProfile(principal.userId(), request);
 
