@@ -15,6 +15,7 @@ import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -93,7 +94,15 @@ public class TokenProviderTest {
 
         // then
         assertNotNull(authentication);
-        assertEquals("1", authentication.getName());
+        assertInstanceOf(CustomUserPrincipal.class, authentication.getPrincipal());
+        assertEquals(CustomUserPrincipal.class, authentication.getPrincipal().getClass());
+
+        CustomUserPrincipal principal =
+                (CustomUserPrincipal) authentication.getPrincipal();
+
+        assertEquals(1L, principal.userId());
+        assertEquals(Role.BUYER, principal.role());
+
         assertEquals(1, authentication.getAuthorities().size());
         assertTrue(
                 authentication.getAuthorities().stream()
