@@ -7,6 +7,7 @@ import com.team10.backend.domain.feed.dto.comment.CreateCommentRequestDto;
 import com.team10.backend.domain.feed.dto.comment.UpdateCommentRequestDto;
 import com.team10.backend.domain.feed.service.FeedCommentService;
 import com.team10.backend.global.dto.ApiResponse;
+import com.team10.backend.global.security.CustomUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -14,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -40,9 +42,9 @@ public class FeedCommentController {
             @PathVariable Long sellerId,
             @PathVariable Long feedId,
             @RequestBody @Valid CreateCommentRequestDto requestDto,
-            Authentication authentication
+            @AuthenticationPrincipal CustomUserPrincipal currentUser
     ) {
-        return ApiResponse.ok(feedCommentService.createComment(sellerId, feedId, requestDto, currentUserId(authentication)));
+        return ApiResponse.ok(feedCommentService.createComment(sellerId, feedId, requestDto, currentUser.userId()));
     }
 
     @GetMapping
@@ -53,9 +55,11 @@ public class FeedCommentController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt,desc") String sort,
-            Authentication authentication
+            @AuthenticationPrincipal CustomUserPrincipal currentUser
     ) {
-        return ApiResponse.ok(feedCommentService.getComments(sellerId, feedId, page, size, sort, nullableCurrentUserId(authentication)));
+        Long currentUserId = currentUser != null ? currentUser.userId() : null;
+
+        return ApiResponse.ok(feedCommentService.getComments(sellerId, feedId, page, size, sort, currentUserId));
     }
 
     @PatchMapping("/{commentId}")
@@ -65,9 +69,9 @@ public class FeedCommentController {
             @PathVariable Long feedId,
             @PathVariable Long commentId,
             @RequestBody @Valid UpdateCommentRequestDto requestDto,
-            Authentication authentication
-    ){
-        return ApiResponse.ok(feedCommentService.updateComment(sellerId, feedId, commentId, requestDto, currentUserId(authentication)));
+            @AuthenticationPrincipal CustomUserPrincipal currentUser
+            ){
+        return ApiResponse.ok(feedCommentService.updateComment(sellerId, feedId, commentId, requestDto, currentUser.userId()));
     }
 
     @DeleteMapping("/{commentId}")
@@ -76,9 +80,9 @@ public class FeedCommentController {
             @PathVariable Long sellerId,
             @PathVariable Long feedId,
             @PathVariable Long commentId,
-            Authentication authentication
+            @AuthenticationPrincipal CustomUserPrincipal currentUser
     ) {
-        feedCommentService.deleteComment(sellerId, feedId, commentId, currentUserId(authentication));
+        feedCommentService.deleteComment(sellerId, feedId, commentId, currentUser.userId());
         return ApiResponse.ok();
     }
 
@@ -90,9 +94,9 @@ public class FeedCommentController {
             @PathVariable Long sellerId,
             @PathVariable Long feedId,
             @PathVariable Long commentId,
-            Authentication authentication
+            @AuthenticationPrincipal CustomUserPrincipal currentUser
     ) {
-        return ApiResponse.ok(feedCommentService.toggleCommentLike(sellerId, feedId, commentId, currentUserId(authentication)));
+        return ApiResponse.ok(feedCommentService.toggleCommentLike(sellerId, feedId, commentId, currentUser.userId()));
     }
 
     private Long currentUserId(Authentication authentication) {

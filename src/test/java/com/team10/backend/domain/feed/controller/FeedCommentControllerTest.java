@@ -1,5 +1,7 @@
 package com.team10.backend.domain.feed.controller;
 
+import com.team10.backend.domain.user.enums.Role;
+import com.team10.backend.global.security.CustomUserPrincipal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -9,9 +11,15 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -92,13 +100,13 @@ public class FeedCommentControllerTest {
                 """;
 
         mockMvc.perform(post("/api/v1/stores/1/feeds/100/comments")
-                        .principal(new UsernamePasswordAuthenticationToken("2", null))
+                        .with(authenticatedUser(2L, Role.BUYER))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.content").value("댓글 생성 테스트입니다."))
-                .andExpect(jsonPath("$.data.writer.userId").value("2"))
+                .andExpect(jsonPath("$.data.writer.userId").value(2))
                 .andExpect(jsonPath("$.data.isMine").value(true));
     }
 
@@ -116,7 +124,7 @@ public class FeedCommentControllerTest {
         );
 
         mockMvc.perform(get("/api/v1/stores/1/feeds/100/comments")
-                        .principal(new UsernamePasswordAuthenticationToken("2", null))
+                        .with(authenticatedUser(2L, Role.BUYER))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -185,14 +193,14 @@ public class FeedCommentControllerTest {
                 """;
 
         mockMvc.perform(patch("/api/v1/stores/1/feeds/100/comments/203")
-                        .principal(new UsernamePasswordAuthenticationToken("2", null))
+                        .with(authenticatedUser(2L, Role.BUYER))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.commentId").value("203"))
+                .andExpect(jsonPath("$.data.commentId").value(203))
                 .andExpect(jsonPath("$.data.content").value("댓글 수정 후입니다."))
-                .andExpect(jsonPath("$.data.writer.userId").value("2"))
+                .andExpect(jsonPath("$.data.writer.userId").value(2))
                 .andExpect(jsonPath("$.data.isMine").value(true));
     }
 
@@ -216,7 +224,7 @@ public class FeedCommentControllerTest {
         );
 
         mockMvc.perform(delete("/api/v1/stores/1/feeds/100/comments/201")
-                        .principal(new UsernamePasswordAuthenticationToken("2", null))
+                        .with(authenticatedUser(2L, Role.BUYER))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
@@ -236,11 +244,24 @@ public class FeedCommentControllerTest {
         );
 
         mockMvc.perform(post("/api/v1/stores/1/feeds/100/comments/202/like")
-                        .principal(new UsernamePasswordAuthenticationToken("2", null))
+                        .with(authenticatedUser(2L, Role.BUYER))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.isLiked").value(true))
+                .andExpect(jsonPath("$.data.liked").value(true))
                 .andExpect(jsonPath("$.data.likeCount").value(1));
+    }
+
+    private RequestPostProcessor authenticatedUser(Long userId, Role role) {
+        return request -> {
+            SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+            securityContext.setAuthentication(new UsernamePasswordAuthenticationToken(
+                    new CustomUserPrincipal(userId, role),
+                    null,
+                    List.of(new SimpleGrantedAuthority("ROLE_" + role.name()))
+            ));
+            SecurityContextHolder.setContext(securityContext);
+            return request;
+        };
     }
 }

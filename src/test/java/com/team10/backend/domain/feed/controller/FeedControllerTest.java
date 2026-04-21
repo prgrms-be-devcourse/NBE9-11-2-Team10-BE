@@ -1,6 +1,8 @@
 package com.team10.backend.domain.feed.controller;
 
 import com.team10.backend.domain.feed.repository.FeedPostRepository;
+import com.team10.backend.domain.user.enums.Role;
+import com.team10.backend.global.security.CustomUserPrincipal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -10,9 +12,15 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -84,7 +92,7 @@ public class FeedControllerTest {
             """;
 
         mockMvc.perform(post("/api/v1/stores/me/feeds")
-                        .principal(new UsernamePasswordAuthenticationToken("1", null))
+                        .with(authenticatedUser(1L, Role.SELLER))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated()) // 201 확인
@@ -115,6 +123,7 @@ public class FeedControllerTest {
         );
 
         mockMvc.perform(get("/api/v1/stores/1/feeds")
+                        .with(authenticatedUser(2L, Role.BUYER))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -144,7 +153,7 @@ public class FeedControllerTest {
             """;
 
         mockMvc.perform(patch("/api/v1/stores/me/feeds/100")
-                        .principal(new UsernamePasswordAuthenticationToken("1", null))
+                        .with(authenticatedUser(1L, Role.SELLER))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk())
@@ -169,7 +178,7 @@ public class FeedControllerTest {
         );
 
         mockMvc.perform(delete("/api/v1/stores/me/feeds/101")
-                        .principal(new UsernamePasswordAuthenticationToken("1", null))
+                        .with(authenticatedUser(1L, Role.SELLER))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
@@ -192,11 +201,24 @@ public class FeedControllerTest {
         );
 
         mockMvc.perform(post("/api/v1/stores/me/feeds/100/like")
-                        .principal(new UsernamePasswordAuthenticationToken("2", null))
+                        .with(authenticatedUser(2L, Role.BUYER))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.isLiked").value(true))
+                .andExpect(jsonPath("$.data.liked").value(true))
                 .andExpect(jsonPath("$.data.likeCount").value(1));
+    }
+
+    private RequestPostProcessor authenticatedUser(Long userId, Role role) {
+        return request -> {
+            SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+            securityContext.setAuthentication(new UsernamePasswordAuthenticationToken(
+                    new CustomUserPrincipal(userId, role),
+                    null,
+                    List.of(new SimpleGrantedAuthority("ROLE_" + role.name()))
+            ));
+            SecurityContextHolder.setContext(securityContext);
+            return request;
+        };
     }
 }

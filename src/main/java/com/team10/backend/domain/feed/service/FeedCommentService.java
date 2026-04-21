@@ -24,6 +24,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -67,45 +69,13 @@ public class FeedCommentService {
         Page<FeedComment> commentPage = feedCommentRepository.findAllByFeedPostId(feedId, pageable);
 
         var comments = commentPage.getContent().stream()
-                .map(comment -> {
-                    boolean isLiked = currentUser != null
-                            && feedCommentLikeRepository.existsByFeedComment_IdAndUser_Id(
-                                    comment.getId(),
-                                    currentUser.getId()
-                            );
-                    return CommentResponseDto.from(comment, isLiked, currentUser);
-                })
+                .map(comment -> toCommentResponse(comment, currentUser))
                 .toList();
 
-        return new CommentListResponseDto(
-                comments,
-                new PaginationResponseDto(
-                        commentPage.getNumber(),
-                        commentPage.getTotalPages(),
-                        commentPage.getTotalElements()
-                )
-        );
+        return new CommentListResponseDto(comments, toPaginationDto(commentPage));
     }
 
-    private Pageable createPageable(int page, int size, String sort) {
-        int safePage = Math.max(page, 0);
-        int safeSize = Math.min(Math.max(size, 1), 50);
-        Sort safeSort = parseSort(sort);
 
-        return PageRequest.of(safePage, safeSize, safeSort);
-    }
-
-    private Sort parseSort(String sort) {
-        String[] sortParts = sort == null ? new String[0] : sort.split(",");
-        String property = sortParts.length > 0 && "createdAt".equals(sortParts[0])
-                ? sortParts[0]
-                : "createdAt";
-        Sort.Direction direction = sortParts.length > 1 && "asc".equalsIgnoreCase(sortParts[1])
-                ? Sort.Direction.ASC
-                : Sort.Direction.DESC;
-
-        return Sort.by(direction, property);
-    }
 
     @Transactional
     public CommentResponseDto updateComment(
@@ -129,12 +99,12 @@ public class FeedCommentService {
         feedComment.updateContent(requestDto.content());
 
 
-        boolean isLiked = feedCommentLikeRepository.existsByFeedComment_IdAndUser_Id(
+        boolean liked = feedCommentLikeRepository.existsByFeedComment_IdAndUser_Id(
                 commentId,
                 currentUser.getId()
         );
 
-        return CommentResponseDto.from(feedComment, isLiked, currentUser);
+        return CommentResponseDto.from(feedComment, liked, currentUser);
 
     }
 
@@ -147,10 +117,7 @@ public class FeedCommentService {
         FeedComment feedComment = feedCommentRepository.findByIdAndFeedPostId(commentId, feedId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
 
-        boolean isCommentWriter = feedComment.getWriter().getId().equals(currentUser.getId());
-        boolean isFeedOwner = feedPost.getUser().getId().equals(currentUser.getId());
-
-        if (!isCommentWriter && !isFeedOwner) {
+        if (!canDeleteComment(feedComment, feedPost, currentUser)) {
             throw new BusinessException(ErrorCode.COMMENT_ACCESS_DENIED);
         }
 
@@ -168,22 +135,41 @@ public class FeedCommentService {
         User currentUser = getUser(currentUserId);
 
         getFeedPost(sellerId, feedId);
+
         FeedComment feedComment = feedCommentRepository.findByIdAndFeedPostId(commentId, feedId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
 
-        boolean isLiked = feedCommentLikeRepository.findByFeedComment_IdAndUser_Id(commentId, currentUser.getId())
-                .map(commentLike -> {
-                    feedCommentLikeRepository.delete(commentLike);
-                    feedComment.decreaseLikeCount();
-                    return false;
-                })
-                .orElseGet(() -> {
-                    feedCommentLikeRepository.save(new FeedCommentLike(feedComment, currentUser));
-                    feedComment.increaseLikeCount();
-                    return true;
-                });
+        boolean liked = toggleLike(feedComment, currentUser);
 
-        return new CommentLikeToggleResponseDto(isLiked, feedComment.getLikeCount());
+        return new CommentLikeToggleResponseDto(liked, feedComment.getLikeCount());
+    }
+
+    private Pageable createPageable(int page, int size, String sort) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 50);
+        Sort safeSort = parseSort(sort);
+
+        return PageRequest.of(safePage, safeSize, safeSort);
+    }
+
+    private Sort parseSort(String sort) {
+        String[] sortParts = sort == null ? new String[0] : sort.split(",");
+        String property = sortParts.length > 0 && "createdAt".equals(sortParts[0])
+                ? sortParts[0]
+                : "createdAt";
+        Sort.Direction direction = sortParts.length > 1 && "asc".equalsIgnoreCase(sortParts[1])
+                ? Sort.Direction.ASC
+                : Sort.Direction.DESC;
+
+        return Sort.by(direction, property);
+    }
+
+    private PaginationResponseDto toPaginationDto(Page<FeedComment> commentPage) {
+        return new PaginationResponseDto(
+                commentPage.getNumber(),
+                commentPage.getTotalPages(),
+                commentPage.getTotalElements()
+        );
     }
 
     private FeedPost getFeedPost(Long sellerId, Long feedId) {
@@ -208,5 +194,36 @@ public class FeedCommentService {
 
     private User getNullableUser(Long userId) {
         return userId == null ? null : getUser(userId);
+    }
+
+    private CommentResponseDto toCommentResponse(FeedComment comment, User currentUser) {
+        boolean liked = currentUser != null
+                && feedCommentLikeRepository.existsByFeedComment_IdAndUser_Id(
+                comment.getId(),
+                currentUser.getId()
+        );
+        return CommentResponseDto.from(comment, liked, currentUser);
+    }
+
+    private boolean canDeleteComment(FeedComment feedComment, FeedPost feedPost, User currentUser) {
+        boolean isCommentWriter = feedComment.getWriter().getId().equals(currentUser.getId());
+        boolean isFeedOwner = feedPost.getUser().getId().equals(currentUser.getId());
+        return isCommentWriter || isFeedOwner;
+    }
+
+    private boolean toggleLike(FeedComment feedComment, User currentUser) {
+        Optional<FeedCommentLike> existingLike =
+                feedCommentLikeRepository.findByFeedComment_IdAndUser_Id(
+                        feedComment.getId(), currentUser.getId());
+
+        if (existingLike.isPresent()) {
+            feedCommentLikeRepository.delete(existingLike.get());
+            feedComment.decreaseLikeCount();
+            return false;
+        }
+
+        feedCommentLikeRepository.save(new FeedCommentLike(feedComment, currentUser));
+        feedComment.increaseLikeCount();
+        return true;
     }
 }

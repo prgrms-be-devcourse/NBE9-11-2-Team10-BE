@@ -10,7 +10,9 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "feed_likes")
+@Table(name = "feed_likes", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_feed_like_post_user", columnNames = {"feed_post_id", "user_id"})
+})
 public class FeedLike extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
