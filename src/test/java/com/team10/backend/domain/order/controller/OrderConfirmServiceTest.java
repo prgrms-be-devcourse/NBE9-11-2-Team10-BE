@@ -11,20 +11,25 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import java.nio.charset.StandardCharsets;
+
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest
 @ActiveProfiles("test")
 class OrderConfirmServiceTest {
-
+    private final String TOSS_URL = "https://api.tosspayments.com/v1/payments";
     @Autowired
     private OrderConfirmService orderConfirmService;
 
@@ -34,29 +39,79 @@ class OrderConfirmServiceTest {
     @ParameterizedTest
     @ValueSource(strings = {"REJECT_ACCOUNT_PAYMENT", "REJECT_CARD_PAYMENT", "REJECT_CARD_COMPANY", "FORBIDDEN_REQUEST", "INVALID_PASSWORD"})
     @DisplayName("403 Forbidden 관련 모든 에러 케이스 검증")
-    void confirmPayment_fail_forbiddenGroup(String errorCode) {
+    void confirmPayment_fail_forbiddenGroup2(String errorCode) {
+        // 1. Given: RestTemplate이 HttpClientErrorException(403)을 던지도록 설정
         ConfirmRequest request = new ConfirmRequest("test_key", "order_id", 5000L);
 
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
+        // Toss 에러 응답 바디 시뮬레이션 (ErrorCode.name()이 포함되도록)
+        String errorResponseBody = "{\"code\":\"" + errorCode + "\", \"message\":\"테스트 에러\"}";
+
+        HttpClientErrorException forbiddenException = HttpClientErrorException.create(
+                HttpStatus.FORBIDDEN,
+                "Forbidden",
+                HttpHeaders.EMPTY,
+                errorResponseBody.getBytes(),
+                StandardCharsets.UTF_8
+        );
+
+        // restTemplate 호출 시 에러 발생시킴
+        when(restTemplate.postForEntity(anyString(), any(), eq(TossConfirmResponse.class)))
+                .thenThrow(forbiddenException);
+
+        // 2. When & Then
+        // 1. ExhaustedRetryException이 발생함을 기대함
+        Exception exception = assertThrows(Exception.class, () -> {
             orderConfirmService.sendConfirmRequest(request, errorCode);
         });
 
-        assertEquals(errorCode, exception.getErrorCode().name());
+        // 2. 만약 Retry가 개입했다면 원본 에러(getCause)를 확인
+        Throwable actualException = exception;
+        if (exception instanceof org.springframework.retry.ExhaustedRetryException) {
+            actualException = exception.getCause();
+        }
+
+        // 3. 최종 검증
+        assertTrue(actualException instanceof BusinessException);
+        assertEquals(errorCode, ((BusinessException) actualException).getErrorCode().name());
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"NOT_FOUND_PAYMENT", "NOT_FOUND_PAYMENT_SESSION"})
     @DisplayName("404 Not Found 관련 모든 에러 케이스 검증")
     void confirmPayment_fail_notFoundGroup(String errorCode) {
-        // given
+        // 1. Given: RestTemplate이 HttpClientErrorException(404)을 던지도록 설정
         ConfirmRequest request = new ConfirmRequest("test_key", "order_id", 5000L);
 
-        // when & then
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
+        // Toss 에러 응답 바디 시뮬레이션
+        String errorResponseBody = "{\"code\":\"" + errorCode + "\", \"message\":\"테스트 에러\"}";
+
+        HttpClientErrorException notFoundException = HttpClientErrorException.create(
+                HttpStatus.NOT_FOUND,
+                "Not Found",
+                HttpHeaders.EMPTY,
+                errorResponseBody.getBytes(),
+                StandardCharsets.UTF_8
+        );
+
+        // restTemplate 호출 시 404 에러 발생시킴
+        when(restTemplate.postForEntity(anyString(), any(), eq(TossConfirmResponse.class)))
+                .thenThrow(notFoundException);
+
+        // 2. When & Then
+        // Retry 설정이 되어 있을 수 있으므로 상위 Exception으로 잡은 뒤 원본 에러를 확인합니다.
+        Exception exception = assertThrows(Exception.class, () -> {
             orderConfirmService.sendConfirmRequest(request, errorCode);
         });
 
-        assertEquals(errorCode, exception.getErrorCode().name());
+        // 만약 Retry가 개입했다면 원본 에러(getCause)를 추출
+        Throwable actualException = exception;
+        if (exception instanceof org.springframework.retry.ExhaustedRetryException) {
+            actualException = exception.getCause();
+        }
+
+        // 3. 최종 검증: BusinessException 여부와 내부 에러 코드 확인
+        assertTrue(actualException instanceof BusinessException);
+        assertEquals(errorCode, ((BusinessException) actualException).getErrorCode().name());
     }
 
     @ParameterizedTest
@@ -74,16 +129,39 @@ class OrderConfirmServiceTest {
     })
     @DisplayName("400 Bad Request 관련 모든 에러 케이스 검증")
     void confirmPayment_fail_badRequestGroup(String errorCode) {
-        // given
+        // 1. Given: RestTemplate이 HttpClientErrorException(400)을 던지도록 설정
         ConfirmRequest request = new ConfirmRequest("test_key", "order_id", 5000L);
 
-        // when & then
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
+        // Toss 에러 응답 바디 시뮬레이션 (ErrorCode 포함)
+        String errorResponseBody = "{\"code\":\"" + errorCode + "\", \"message\":\"테스트 에러(400)\"}";
+
+        HttpClientErrorException badRequestException = HttpClientErrorException.create(
+                HttpStatus.BAD_REQUEST,
+                "Bad Request",
+                HttpHeaders.EMPTY,
+                errorResponseBody.getBytes(),
+                StandardCharsets.UTF_8
+        );
+
+        // restTemplate 호출 시 400 에러 발생 모킹
+        when(restTemplate.postForEntity(anyString(), any(), eq(TossConfirmResponse.class)))
+                .thenThrow(badRequestException);
+
+        // 2. When & Then
+        // Retry 발생 가능성을 염두에 두어 최상위 Exception으로 포착
+        Exception exception = assertThrows(Exception.class, () -> {
             orderConfirmService.sendConfirmRequest(request, errorCode);
         });
 
-        // 발생한 에러 코드가 입력한 에러 코드와 일치하는지 검증
-        assertEquals(errorCode, exception.getErrorCode().name());
+        // 만약 Retry 정책에 의해 감싸져 있다면 내부 원인(BusinessException)을 확인
+        Throwable actualException = exception;
+        if (exception instanceof org.springframework.retry.ExhaustedRetryException) {
+            actualException = exception.getCause();
+        }
+
+        // 3. 최종 검증
+        assertTrue(actualException instanceof BusinessException, "발생한 예외는 BusinessException이어야 합니다.");
+        assertEquals(errorCode, ((BusinessException) actualException).getErrorCode().name());
     }
 
     @ParameterizedTest
@@ -94,16 +172,40 @@ class OrderConfirmServiceTest {
     })
     @DisplayName("500 Server Error 관련 모든 에러 케이스 검증")
     void confirmPayment_fail_serverErrorGroup(String errorCode) {
-        // given
+        // 1. Given: RestTemplate이 HttpServerErrorException(500)을 던지도록 설정
         ConfirmRequest request = new ConfirmRequest("test_key", "order_id", 5000L);
 
-        // when & then
-        // BusinessException이 발생해야 하며, 에러 코드가 일치해야 함
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
+        // Toss 에러 응답 바디 시뮬레이션
+        String errorResponseBody = "{\"code\":\"" + errorCode + "\", \"message\":\"서버 내부 에러(500)\"}";
+
+        // 500 에러를 명시적으로 생성 (HttpServerErrorException)
+        HttpServerErrorException serverErrorException = HttpServerErrorException.create(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Internal Server Error",
+                HttpHeaders.EMPTY,
+                errorResponseBody.getBytes(),
+                StandardCharsets.UTF_8
+        );
+
+        // restTemplate 호출 시 500 에러 발생 모킹
+        when(restTemplate.postForEntity(anyString(), any(), eq(TossConfirmResponse.class)))
+                .thenThrow(serverErrorException);
+
+        // 2. When & Then
+        // Retry 발생 가능성을 염두에 두어 Exception으로 포착
+        Exception exception = assertThrows(Exception.class, () -> {
             orderConfirmService.sendConfirmRequest(request, errorCode);
         });
 
-        assertEquals(errorCode, exception.getErrorCode().name());
+        // Retry에 의해 감싸져 있다면 원본 BusinessException 추출
+        Throwable actualException = exception;
+        if (exception instanceof org.springframework.retry.ExhaustedRetryException) {
+            actualException = exception.getCause();
+        }
+
+        // 3. 최종 검증
+        assertTrue(actualException instanceof BusinessException, "발생한 예외는 BusinessException이어야 합니다.");
+        assertEquals(errorCode, ((BusinessException) actualException).getErrorCode().name());
     }
 
     @Test
