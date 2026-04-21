@@ -27,6 +27,9 @@ custom:
   jwt:
     secretKey: ${SECRET_KEY}
     expireTime: 15
+  toss:
+    payment:
+      secret-key: test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6 # 공용 시크릿 키라 노출되어도 괜찮습니다.
 
 cloud:
   aws:

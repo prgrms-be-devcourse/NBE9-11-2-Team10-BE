@@ -44,9 +44,43 @@ public enum ErrorCode {
 
     //=== 결제 도메인(6000~6999) ===
     PAYMENT_NOT_FOUND("PAYMENT_001","결제 정보가 존재하지 않습니다.",HttpStatus.NOT_FOUND),
+    AMOUNT_MISMATCH("PAYMENT_002","결제 금액이 일치하지 않습니다. 위변조 위험이 있습니다.", HttpStatus.BAD_REQUEST),
 
     //=== 배송 도메인(7000~7999) ===
-    CANNOT_CANCEL_SHIPPING_ORDER("DELIVERY_01","이미 출고된 상품은 취소할 수 없습니다.",HttpStatus.BAD_REQUEST);
+    CANNOT_CANCEL_SHIPPING_ORDER("DELIVERY_01","이미 출고된 상품은 취소할 수 없습니다.",HttpStatus.BAD_REQUEST),
+    DELIVERY_NOT_FOUND("DELIVERY_02","배송 정보를 찾을 수 없습니다.",HttpStatus.NOT_FOUND),
+
+    //====토스 외부 API 예외처리=====
+    // -------승인 비즈니스 오류(400,404,403)-----
+    //404
+    NOT_FOUND_PAYMENT("TOSS_01","존재하지 않는 결제 정보 입니다.",HttpStatus.NOT_FOUND),
+    NOT_FOUND_PAYMENT_SESSION("TOSS_02","결제 시간이 만료되어 결제 진행 데이터가 존재하지 않습니다.",HttpStatus.NOT_FOUND),
+
+    //403
+    REJECT_ACCOUNT_PAYMENT("TOSS_03","잔액부족으로 결제에 실패했습니다.",HttpStatus.FORBIDDEN),
+    REJECT_CARD_PAYMENT("TOSS_04","한도초과 혹은 잔액부족으로 결제에 실패했습니다.",HttpStatus.FORBIDDEN),
+    REJECT_CARD_COMPANY("TOSS_05","결제 승인이 거절되었습니다.",HttpStatus.FORBIDDEN),
+    FORBIDDEN_REQUEST("TOSS_06", "허용되지 않은 요청입니다.",HttpStatus.FORBIDDEN),
+    INVALID_PASSWORD("TOSS_07", "결제 비밀번호가 일치하지 않습니다.",HttpStatus.FORBIDDEN),
+
+    //400
+    ALREADY_PROCESSED_PAYMENT("TOSS_08", "이미 처리된 결제 입니다.",HttpStatus.BAD_REQUEST),
+    INVALID_REQUEST("TOSS_09",  "잘못된 요청입니다.",HttpStatus.BAD_REQUEST),
+    INVALID_API_KEY("TOSS_10",   "잘못된 시크릿키 연동 정보 입니다.",HttpStatus.BAD_REQUEST),
+    INVALID_REJECT_CARD("TOSS_11",   "카드 사용이 거절되었습니다. 카드사 문의가 필요합니다.",HttpStatus.BAD_REQUEST),
+    INVALID_CARD_EXPIRATION("TOSS_12",   "카드 정보를 다시 확인해주세요. (유효기간)",HttpStatus.BAD_REQUEST),
+    INVALID_STOPPED_CARD("TOSS_13",   "정지된 카드 입니다.",HttpStatus.BAD_REQUEST),
+    INVALID_CARD_LOST_OR_STOLEN("TOSS_14",   "분실 혹은 도난 카드입니다.",HttpStatus.BAD_REQUEST),
+    INVALID_CARD_NUMBER("TOSS_15",   "카드번호를 다시 확인해주세요.",HttpStatus.BAD_REQUEST),
+    INVALID_ACCOUNT_INFO_RE_REGISTER("TOSS_16",    "유효하지 않은 계좌입니다. 계좌 재등록 후 시도해주세요.",HttpStatus.BAD_REQUEST),
+    UNAPPROVED_ORDER_ID("TOSS_17",    "아직 승인되지 않은 주문번호입니다.",HttpStatus.BAD_REQUEST),
+    //----승인 시스템 오류(토스측 오류, 500,401..)-----
+    FAILED_PAYMENT_INTERNAL_SYSTEM_PROCESSING("TOSS_18","결제가 완료되지 않았어요. 다시 시도해주세요.",HttpStatus.INTERNAL_SERVER_ERROR),
+    UNKNOWN_PAYMENT_ERROR("TOSS_19", "내부 시스템 처리 작업이 실패했습니다. 잠시 후 다시 시도해주세요",HttpStatus.INTERNAL_SERVER_ERROR),
+    FAILED_INTERNAL_SYSTEM_PROCESSING("TOSS_20", "결제에 실패했어요. 같은 문제가 반복된다면 은행이나 카드사로 문의해주세요.",HttpStatus.INTERNAL_SERVER_ERROR),
+    //-----네트워크 오류 ------
+    //503 서버가 현재 요청을 처리할 수 없음 (일시적 부하 또는 통신 장애).
+    NETWORK_ERROR_FINAL_FAILED("NETWORK_01","결제 결과를 확인할 수 없습니다. 중복 결제를 방지하기 위해 잠시 후 결제 내역을 확인해 주세요.",HttpStatus.SERVICE_UNAVAILABLE);
 
 
     private final String code;        // 프론트에서 분기용 비즈니스 코드

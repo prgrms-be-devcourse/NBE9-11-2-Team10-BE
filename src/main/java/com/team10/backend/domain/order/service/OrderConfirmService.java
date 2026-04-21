@@ -2,7 +2,6 @@ package com.team10.backend.domain.order.service;
 
 import com.team10.backend.domain.order.dto.confirm.ConfirmRequest;
 import com.team10.backend.domain.order.dto.confirm.TossConfirmResponse;
-import com.team10.backend.global.dto.ApiResponse;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
