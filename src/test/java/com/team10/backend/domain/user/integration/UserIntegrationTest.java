@@ -61,7 +61,7 @@ public class UserIntegrationTest {
                 .andExpect(status().isOk());
 
         resultActions
-                .andExpect(jsonPath("$.data.email").value("buyer@test.com"));
+                .andExpect(jsonPath("$.data.name").value("김구매"));
     }
 
     @Test
@@ -129,7 +129,7 @@ public class UserIntegrationTest {
                 .andExpect(status().isOk());
 
         resultActions
-                .andExpect(jsonPath("$.data.email").value("seller@test.com"));
+                .andExpect(jsonPath("$.data.name").value("송판매"));
     }
 
     @Test

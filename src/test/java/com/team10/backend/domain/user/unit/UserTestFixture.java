@@ -5,10 +5,12 @@ import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.domain.user.enums.Role;
 import com.team10.backend.domain.user.enums.UserStatus;
 
+import java.util.UUID;
+
 public class UserTestFixture {
     public static User createBuyer() {
         return User.builder()
-                .email("buyer@test.com")
+                .email("buyer" + UUID.randomUUID() + "@test.com")
                 .password("password123!")
                 .name("김구매")
                 .nickname("buyer")
@@ -21,7 +23,7 @@ public class UserTestFixture {
 
     public static User createSeller() {
         User user = User.builder()
-                .email("seller@test.com")
+                .email("seller" + UUID.randomUUID() + "@test.com")
                 .password("password123!")
                 .name("송판매")
                 .nickname("seller")
