@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -28,7 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-public class OrderDeleteControllerTest {
+public class    OrderDeleteControllerTest {
 
     @Autowired
     private MockMvc mvc;
@@ -64,7 +65,7 @@ public class OrderDeleteControllerTest {
         jdbcTemplate.update("INSERT INTO payments (id, order_id, order_number, total_amount, status) VALUES (901, 501, ?, 10000, 'READY')", orderNum);
 
         // When & Then
-        mvc.perform(delete("/api/v1/orders/{userId}/{orderNumber}", 1L, orderNum))
+        mvc.perform(delete("/api/v1/orders/{orderNumber}",  orderNum).with(authentication(getAuthentication(1L, Role.BUYER))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.orderNumber").value(orderNum))
                 .andDo(print());
@@ -95,7 +96,7 @@ public class OrderDeleteControllerTest {
 
 
         // When & Then
-        mvc.perform(delete("/api/v1/orders/{userId}/{orderNumber}", 1L, orderNum))
+        mvc.perform(delete("/api/v1/orders/{orderNumber}",  orderNum).with(authentication(getAuthentication(1L, Role.BUYER))))
                 .andExpect(status().isBadRequest()) // CANNOT_CANCEL_SHIPPING_ORDER (400)
                 .andExpect(jsonPath("$.errorCode").value(ErrorCode.CANNOT_CANCEL_SHIPPING_ORDER.getCode()))
                 .andDo(print());
@@ -117,7 +118,7 @@ public class OrderDeleteControllerTest {
 
 
         // When & Then: 유저 2가 유저 1의 주문 삭제 시도
-        mvc.perform(delete("/api/v1/orders/{userId}/{orderNumber}", 2L, orderNum))
+        mvc.perform(delete("/api/v1/orders/{orderNumber}",  orderNum).with(authentication(getAuthentication(2L, Role.BUYER))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.errorCode").value(ErrorCode.ACCESS_DENIED.getCode()))
                 .andDo(print());
