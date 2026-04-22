@@ -1,6 +1,8 @@
 package com.team10.backend.domain.image.service;
 
 import com.team10.backend.domain.image.dto.ImageUploadResponse;
+import com.team10.backend.domain.image.dto.PresignedUrlRequest;
+import com.team10.backend.domain.image.dto.PresignedUrlResponse;
 import com.team10.backend.global.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,6 +11,11 @@ import org.springframework.test.util.ReflectionTestUtils;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
+
+import java.net.URI;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -16,16 +23,19 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class ImageUploadServiceTest {
 
     private S3Client s3Client;
+    private S3Presigner s3Presigner;
     private ImageUploadService imageUploadService;
 
     @BeforeEach
     void setUp() {
         s3Client = mock(S3Client.class);
-        imageUploadService = new ImageUploadService(s3Client);
+        s3Presigner = mock(S3Presigner.class);
+        imageUploadService = new ImageUploadService(s3Client, s3Presigner);
         ReflectionTestUtils.setField(imageUploadService, "bucket", "team10-images-dev-test");
         ReflectionTestUtils.setField(imageUploadService, "region", "ap-northeast-2");
     }
@@ -45,6 +55,31 @@ class ImageUploadServiceTest {
                 .startsWith("https://team10-images-dev-test.s3.ap-northeast-2.amazonaws.com/products/")
                 .endsWith(".jpg");
         verify(s3Client).putObject(any(PutObjectRequest.class), any(software.amazon.awssdk.core.sync.RequestBody.class));
+    }
+
+    @Test
+    void createPresignedUrlReturnsUploadUrlAndImageUrl() throws Exception {
+        PresignedPutObjectRequest presignedRequest = mock(PresignedPutObjectRequest.class);
+        when(presignedRequest.url()).thenReturn(URI.create("https://presigned-upload.test/upload").toURL());
+        when(s3Presigner.presignPutObject(any(PutObjectPresignRequest.class))).thenReturn(presignedRequest);
+
+        PresignedUrlResponse response = imageUploadService.createPresignedUrl(
+                new PresignedUrlRequest("cake.jpg", "image/jpeg", "products")
+        );
+
+        assertThat(response.uploadUrl()).isEqualTo("https://presigned-upload.test/upload");
+        assertThat(response.imageUrl())
+                .startsWith("https://team10-images-dev-test.s3.ap-northeast-2.amazonaws.com/products/")
+                .endsWith(".jpg");
+        verify(s3Presigner).presignPutObject(any(PutObjectPresignRequest.class));
+    }
+
+    @Test
+    void createPresignedUrlRejectsNonImageContentType() {
+        PresignedUrlRequest request = new PresignedUrlRequest("memo.txt", "text/plain", "products");
+
+        assertThatThrownBy(() -> imageUploadService.createPresignedUrl(request))
+                .isInstanceOf(BusinessException.class);
     }
 
     @Test

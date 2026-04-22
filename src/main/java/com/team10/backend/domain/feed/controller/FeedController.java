@@ -1,7 +1,7 @@
 package com.team10.backend.domain.feed.controller;
 
 import com.team10.backend.domain.feed.dto.post.CreateFeedRequestDto;
-import com.team10.backend.domain.feed.dto.post.CreateFeedResponseDto;
+import com.team10.backend.domain.feed.dto.post.FeedResponseDto;
 import com.team10.backend.domain.feed.dto.post.FeedLikeToggleResponseDto;
 import com.team10.backend.domain.feed.dto.post.FeedListResponseDto;
 import com.team10.backend.domain.feed.dto.post.UpdateFeedRequestDto;
@@ -48,11 +48,11 @@ public class FeedController {
     @PostMapping("me/feeds")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "피드 생성", description = "판매자가 피드를 생성 합니다.")
-    public ApiResponse<CreateFeedResponseDto> createFeed(
+    public ApiResponse<FeedResponseDto> createFeed(
             @RequestBody @Valid CreateFeedRequestDto requestDto,
             @AuthenticationPrincipal CustomUserPrincipal seller
             ) {
-        CreateFeedResponseDto responseDto = feedPostService.createFeed(requestDto, seller.userId());
+        FeedResponseDto responseDto = feedPostService.createFeed(requestDto, seller.userId());
         return ApiResponse.ok(responseDto);
     }
 

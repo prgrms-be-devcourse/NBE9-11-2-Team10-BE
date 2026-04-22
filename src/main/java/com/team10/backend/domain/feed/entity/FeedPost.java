@@ -22,7 +22,7 @@ import java.util.List;
 @Table(name = "feed_posts")
 public class FeedPost extends BaseEntity {
 
-    @Column(nullable = false)
+    @Column
     private String imageUrl;
 
     @Column(columnDefinition = "TEXT")

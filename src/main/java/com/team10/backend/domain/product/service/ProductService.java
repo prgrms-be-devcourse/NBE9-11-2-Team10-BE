@@ -1,5 +1,6 @@
 package com.team10.backend.domain.product.service;
 
+import com.team10.backend.domain.image.service.ImageUploadService;
 import com.team10.backend.domain.product.dto.ProductCreateRequest;
 import com.team10.backend.domain.product.dto.ProductDetailResponse;
 import com.team10.backend.domain.product.dto.ProductInactiveResponse;
@@ -28,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +37,7 @@ public class ProductService {
 
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final ImageUploadService imageUploadService;
 
     @Transactional
     public ProductDetailResponse create(Long userId, ProductCreateRequest request) {
@@ -114,6 +117,7 @@ public class ProductService {
     public ProductDetailResponse update(Long userId, Long productId, ProductUpdateRequest request) {
 
         Product product = getAuthorizedProduct(userId, productId);
+        deletePreviousImageIfChanged(product.getImageUrl(), request.imageUrl());
 
         product.update(
                 request.type(),
@@ -165,6 +169,12 @@ public class ProductService {
         }
 
         return product;
+    }
+
+    private void deletePreviousImageIfChanged(String oldImageUrl, String newImageUrl) {
+        if (!Objects.equals(oldImageUrl, newImageUrl)) {
+            imageUploadService.deleteIfManaged(oldImageUrl);
+        }
     }
 
     private Product getAuthorizedProductWithLock(Long userId, Long productId) {
