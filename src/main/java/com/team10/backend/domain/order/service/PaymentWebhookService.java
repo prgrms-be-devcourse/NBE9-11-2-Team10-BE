@@ -6,6 +6,7 @@ import com.team10.backend.domain.order.entity.Order;
 import com.team10.backend.domain.order.entity.OrderDelivery;
 import com.team10.backend.domain.order.entity.Payment;
 import com.team10.backend.domain.order.enums.OrderStatus;
+import com.team10.backend.domain.order.enums.RequestType;
 import com.team10.backend.domain.order.repository.IdempotencyRepository;
 import com.team10.backend.domain.order.repository.OrderDeliveryRepository;
 import com.team10.backend.domain.order.repository.OrderRepository;
@@ -41,30 +42,48 @@ public class PaymentWebhookService {
         Order order = orderRepository.findByOrderNumber(orderId)
                 .orElseThrow(() -> new BusinessException(ORDER_NOT_FOUND));
 
-        IdempotencyRecord record = idempotencyRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new BusinessException(IDEMPOTENCY_NOT_FOUND));
-        // 2. 멱등성 및 상태 체크
         // 이미 DB에서 완료(success)된 주문인데 웹훅이 또 왔다면 무시
-        if (order.getStatus()== OrderStatus.SUCCESS && "DONE".equals(newStatus)) {
-            log.info("이미 처리된 웹훅입니다. orderId={}", orderId);
+        // 2. 최종 상태 체크 (이미 성공했거나 이미 취소된 경우 중복 처리 방지)
+        if (order.getStatus() == OrderStatus.SUCCESS && "DONE".equals(newStatus)) {
+            log.info("이미 완료된 주문입니다. 중복 웹훅 무시: orderId={}", orderId);
             return;
         }
+        if (order.getStatus() == OrderStatus.CANCELED && "CANCELED".equals(newStatus)) {
+            log.info("이미 취소된 주문입니다. 중복 웹훅 무시: orderId={}", orderId);
+            return;
+        }
+
+        //  상태에 따라 조회할 멱등성 타입(RequestType) 결정
+        // DONE이면 결제 승인 건을, CANCELED면 결제 취소 건을 찾아야한다.
+        RequestType type = "CANCELED".equals(newStatus) ? RequestType.CANCEL : RequestType.PAYMENT;
+
+        // 2. findByOrderId -> findByOrderIdAndType으로 변경
+        IdempotencyRecord record = idempotencyRepository.findByOrderIdAndType(orderId, type)
+                .orElseThrow(() -> new BusinessException(IDEMPOTENCY_NOT_FOUND));
 
         // 3. DB가 SUCCESS가 아닌 상태 => 상태 업데이트 (주문 DB와 토스 DB 동기화)
         if ("DONE".equals(newStatus)) {
             // 토스 서버는 DONE인데, 우리 DB는 PENDING 상태
             // 결제 완료 처리 로직 (재고 감소)
-            Payment payment = paymentRepository.findByOrderNumber(orderId)
-                    .orElseThrow(() -> new BusinessException(PAYMENT_NOT_FOUND));
-            OrderDelivery delivery = orderDeliveryRepository.findById(order.getId())
-                    .orElseThrow(() -> new BusinessException(DELIVERY_NOT_FOUND));
-
-            paymentService.statusChangeAfterSuccess(payment,payload.data().paymentKey(),order,delivery);
-            idempotencyService.finalizeRecordFromWebhook(record, payload);
+            handlePaymentSuccess(order, payload, record);
         } else if ("CANCELED".equals(newStatus)) {
-            // 결제 취소 처리
+            // TODO: 결제 취소 로직 (주문 상태 변경 및 재고 복구 등)
+            log.info("결제 취소 웹훅 처리 중: orderId={}", orderId);
+            // 취소 관련 finalize 처리도 필요
+            idempotencyService.finalizeRecordFromWebhook(record, payload);
         }
 
         log.info("주문 상태 업데이트 완료: orderId={}, status={}", orderId, newStatus);
+    }
+
+    private void handlePaymentSuccess(Order order, WebhookPayload payload, IdempotencyRecord record) {
+        Payment payment = paymentRepository.findByOrderNumber(order.getOrderNumber())
+                .orElseThrow(() -> new BusinessException(PAYMENT_NOT_FOUND));
+        OrderDelivery delivery = orderDeliveryRepository.findById(order.getId())
+                .orElseThrow(() -> new BusinessException(DELIVERY_NOT_FOUND));
+
+        // 서비스에서 상태 변경 + 재고 감소 등 수행
+        paymentService.statusChangeAfterSuccess(payment, payload.data().paymentKey(), order, delivery);
+        idempotencyService.finalizeRecordFromWebhook(record, payload);
     }
 }
