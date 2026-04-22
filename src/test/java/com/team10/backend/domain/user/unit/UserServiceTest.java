@@ -164,6 +164,7 @@ public class UserServiceTest {
         // then
         assertNotNull(response);
         assertEquals("새로운판매자", response.nickname());
+        assertEquals("대구", response.address());
         assertEquals("새로운 인사말입니다.", response.bio());
         assertEquals("999-999-99999", response.businessNumber());
     }
