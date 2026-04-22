@@ -1,6 +1,7 @@
 package com.team10.backend.domain.order.repository;
 
 import com.team10.backend.domain.order.entity.IdempotencyRecord;
+import com.team10.backend.domain.order.enums.RequestType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -13,6 +14,11 @@ public interface IdempotencyRepository extends JpaRepository<IdempotencyRecord,L
 
     @Modifying(clearAutomatically = true)
     @Query("UPDATE IdempotencyRecord i SET i.status = 'PENDING', i.updatedAt = CURRENT_TIMESTAMP " +
-            "WHERE i.orderId = :orderId AND i.status != 'PENDING' AND i.status != 'SUCCESS'")
-    int updateStatusToPending(@Param("orderId") String orderId);
+            "WHERE i.orderId = :orderId " +
+            "AND i.type = :type " +
+            "AND i.status != 'PENDING' " +
+            "AND i.status != 'SUCCESS'")
+    int updateStatusToPending(@Param("orderId") String orderId,@Param("type") RequestType type);
+
+    Optional<IdempotencyRecord> findByOrderIdAndType(String orderId, RequestType type);
 }

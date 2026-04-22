@@ -4,6 +4,7 @@ import com.team10.backend.domain.order.dto.confirm.TossConfirmResponse;
 import com.team10.backend.domain.order.dto.webhook.WebhookPayload;
 import com.team10.backend.domain.order.entity.IdempotencyRecord;
 import com.team10.backend.domain.order.enums.IdempotencyStatus;
+import com.team10.backend.domain.order.enums.RequestType;
 import com.team10.backend.domain.order.repository.IdempotencyRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.retry.support.RetrySynchronizationManager;
@@ -21,11 +22,16 @@ public class IdempotencyService {
     private final ObjectMapper objectMapper;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public IdempotencyRecord getOrCreateRecord(String orderId) {
-        return idempotencyRepository.findByOrderId(orderId)
+    public IdempotencyRecord getOrCreateRecord(String orderId, RequestType type,String originalOrderId) {
+
+        return idempotencyRepository.findByOrderIdAndType(orderId, type)
                 .orElseGet(() -> {
                     String initialKey = generateTossKey(orderId);
-                    return idempotencyRepository.save(new IdempotencyRecord(orderId, initialKey));
+                    // 엔티티의 정적 팩토리 메서드 활용
+                    IdempotencyRecord newRecord = (type == RequestType.PAYMENT)
+                            ? IdempotencyRecord.createPayment(orderId, initialKey)
+                            : IdempotencyRecord.createCancel(orderId, initialKey, null); // 취소시 originalOrderId 필요하면 추가
+                    return idempotencyRepository.save(newRecord);
                 });
     }
 
@@ -44,9 +50,21 @@ public class IdempotencyService {
             return true;
         }
 
-        // 2. 처음 시도이거나 FAILED 상태일 때만 PENDING으로 변경 시도
-        int updatedRows = idempotencyRepository.updateStatusToPending(record.getOrderId());
-        return updatedRows > 0;
+        // 2. 핵심: DB에 직접 물어봄과 동시에 상태를 점유(Update)한다.
+        // record 객체의 상태를 묻지 말고 바로 쿼리를 날리낟.
+        int updatedRows = idempotencyRepository.updateStatusToPending(record.getOrderId(), record.getType());
+
+        // 3. 업데이트 된 행이 1개라면 선점하는 것에 성공
+        if (updatedRows > 0) {
+            return true;
+        }
+
+        // 4. 선점 실패 시, 혹시 이미 다른 요청이 성공(SUCCESS)시켰는지 DB에서 다시 확인
+        // (이미 성공했다면 캐시된 응답을 보내주기 위해 true를 반환해야 함)
+        IdempotencyRecord latest = idempotencyRepository.findByOrderIdAndType(record.getOrderId(), record.getType())
+                .orElse(record);
+        //상태가 여전히 PENDING이라면(다른 스레드가 아직 처리 중), 그때는 false가 반환
+        return latest.getStatus() == IdempotencyStatus.SUCCESS;
     }
 
     @Transactional

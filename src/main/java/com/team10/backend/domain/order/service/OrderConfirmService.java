@@ -4,6 +4,7 @@ import com.team10.backend.domain.order.dto.confirm.ConfirmRequest;
 import com.team10.backend.domain.order.dto.confirm.TossConfirmResponse;
 import com.team10.backend.domain.order.entity.IdempotencyRecord;
 import com.team10.backend.domain.order.enums.IdempotencyStatus;
+import com.team10.backend.domain.order.enums.RequestType;
 import com.team10.backend.domain.order.repository.IdempotencyRepository;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
@@ -66,7 +67,7 @@ public class OrderConfirmService {
         String orderId = request.orderId();
 
         // 1. 멱등성 레코드 조회 또는 생성 (새 트랜잭션)
-        IdempotencyRecord record = idempotencyService.getOrCreateRecord(orderId);
+        IdempotencyRecord record = idempotencyService.getOrCreateRecord(orderId, RequestType.PAYMENT,null);
 
         // 2. 이미 성공한 요청이면 저장된 응답 반환
         if (record.getStatus() == IdempotencyStatus.SUCCESS) {
