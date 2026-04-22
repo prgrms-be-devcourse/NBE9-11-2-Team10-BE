@@ -1,10 +1,12 @@
 package com.team10.backend.domain.order.service;
 
 import com.team10.backend.domain.order.dto.webhook.WebhookPayload;
+import com.team10.backend.domain.order.entity.IdempotencyRecord;
 import com.team10.backend.domain.order.entity.Order;
 import com.team10.backend.domain.order.entity.OrderDelivery;
 import com.team10.backend.domain.order.entity.Payment;
 import com.team10.backend.domain.order.enums.OrderStatus;
+import com.team10.backend.domain.order.repository.IdempotencyRepository;
 import com.team10.backend.domain.order.repository.OrderDeliveryRepository;
 import com.team10.backend.domain.order.repository.OrderRepository;
 import com.team10.backend.domain.order.repository.PaymentRepository;
@@ -26,6 +28,8 @@ public class PaymentWebhookService {
     private final PaymentRepository paymentRepository;
     private final OrderDeliveryRepository orderDeliveryRepository;
     private final PaymentService paymentService;
+    private final IdempotencyRepository idempotencyRepository;
+    private final IdempotencyService idempotencyService;
 
     @Transactional
     public void processWebhook(WebhookPayload payload) {
@@ -37,6 +41,8 @@ public class PaymentWebhookService {
         Order order = orderRepository.findByOrderNumber(orderId)
                 .orElseThrow(() -> new BusinessException(ORDER_NOT_FOUND));
 
+        IdempotencyRecord record = idempotencyRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new BusinessException(IDEMPOTENCY_NOT_FOUND));
         // 2. 멱등성 및 상태 체크
         // 이미 DB에서 완료(success)된 주문인데 웹훅이 또 왔다면 무시
         if (order.getStatus()== OrderStatus.SUCCESS && "DONE".equals(newStatus)) {
@@ -52,7 +58,9 @@ public class PaymentWebhookService {
                     .orElseThrow(() -> new BusinessException(PAYMENT_NOT_FOUND));
             OrderDelivery delivery = orderDeliveryRepository.findById(order.getId())
                     .orElseThrow(() -> new BusinessException(DELIVERY_NOT_FOUND));
+
             paymentService.statusChangeAfterSuccess(payment,payload.data().paymentKey(),order,delivery);
+            idempotencyService.finalizeRecordFromWebhook(record, payload);
         } else if ("CANCELED".equals(newStatus)) {
             // 결제 취소 처리
         }
