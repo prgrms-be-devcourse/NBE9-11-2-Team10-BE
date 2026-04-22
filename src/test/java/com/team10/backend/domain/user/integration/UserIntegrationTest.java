@@ -112,7 +112,7 @@ public class UserIntegrationTest {
                 new ProfileImageUpdateRequest("https://test.com/new-profile.jpg");
 
         ResultActions resultActions = mvc.perform(
-                        put("/api/v1/users/me/profile-image")
+                        put("/api/v1/me/profile-image")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request))
                 )
@@ -120,7 +120,7 @@ public class UserIntegrationTest {
 
         resultActions
                 .andExpect(handler().handlerType(UserController.class))
-                .andExpect(handler().methodName("updateMyUserProfileImage"))
+                .andExpect(handler().methodName("updateMyProfileImage"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.imageUrl").value("https://test.com/new-profile.jpg"));
     }
@@ -135,12 +135,12 @@ public class UserIntegrationTest {
 
         AuthTestHelper.setAuth(user);
 
-        ResultActions resultActions = mvc.perform(delete("/api/v1/users/me/profile-image"))
+        ResultActions resultActions = mvc.perform(delete("/api/v1/me/profile-image"))
                 .andDo(print());
 
         resultActions
                 .andExpect(handler().handlerType(UserController.class))
-                .andExpect(handler().methodName("deleteMyUserProfileImage"))
+                .andExpect(handler().methodName("deleteMyProfileImage"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.imageUrl").value(nullValue()));
     }
@@ -230,7 +230,7 @@ public class UserIntegrationTest {
                 new ProfileImageUpdateRequest("https://test.com/new-seller-profile.jpg");
 
         ResultActions resultActions = mvc.perform(
-                        put("/api/v1/sellers/me/profile-image")
+                        put("/api/v1/me/profile-image")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request))
                 )
@@ -238,7 +238,7 @@ public class UserIntegrationTest {
 
         resultActions
                 .andExpect(handler().handlerType(UserController.class))
-                .andExpect(handler().methodName("updateMySellerProfileImage"))
+                .andExpect(handler().methodName("updateMyProfileImage"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.imageUrl").value("https://test.com/new-seller-profile.jpg"));
     }
@@ -253,12 +253,12 @@ public class UserIntegrationTest {
 
         AuthTestHelper.setAuth(user);
 
-        ResultActions resultActions = mvc.perform(delete("/api/v1/sellers/me/profile-image"))
+        ResultActions resultActions = mvc.perform(delete("/api/v1/me/profile-image"))
                 .andDo(print());
 
         resultActions
                 .andExpect(handler().handlerType(UserController.class))
-                .andExpect(handler().methodName("deleteMySellerProfileImage"))
+                .andExpect(handler().methodName("deleteMyProfileImage"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.imageUrl").value(nullValue()));
     }
