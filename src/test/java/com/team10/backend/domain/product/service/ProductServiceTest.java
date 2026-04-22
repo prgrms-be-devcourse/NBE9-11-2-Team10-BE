@@ -145,7 +145,8 @@ class ProductServiceTest {
         ProductPageResponse response = productService.list(0, 10, null, null, null);
 
         assertThat(response.content()).hasSize(2);
-        assertThat(response.page()).isEqualTo(0);
+        assertThat(response.content().get(0).nickname()).isEqualTo("seller1");
+        assertThat(response.page()).isEqualTo(1);
         assertThat(response.size()).isEqualTo(10);
         assertThat(response.totalElements()).isEqualTo(2);
         assertThat(response.totalPages()).isEqualTo(1);
@@ -162,6 +163,7 @@ class ProductServiceTest {
         ProductPageResponse response = productService.list(0, 10, ProductType.BOOK, null, null);
 
         assertThat(response.content()).hasSize(1);
+        assertThat(response.content().get(0).nickname()).isEqualTo("seller1");
         assertThat(response.content().get(0).productName()).isEqualTo("책1");
         assertThat(response.content().get(0).type()).isEqualTo(ProductType.BOOK);
     }
@@ -180,6 +182,7 @@ class ProductServiceTest {
         ProductPageResponse response = productService.list(0, 10, null, ProductStatus.SELLING, null);
 
         assertThat(response.content()).hasSize(1);
+        assertThat(response.content().get(0).nickname()).isEqualTo("seller1");
         assertThat(response.content().get(0).productName()).isEqualTo("책1");
         assertThat(response.content().get(0).status()).isEqualTo(ProductStatus.SELLING);
     }
@@ -200,6 +203,7 @@ class ProductServiceTest {
         ProductPageResponse response = productService.list(0, 10, ProductType.BOOK, ProductStatus.SELLING, null);
 
         assertThat(response.content()).hasSize(1);
+        assertThat(response.content().get(0).nickname()).isEqualTo("seller1");
         assertThat(response.content().get(0).productName()).isEqualTo("책1");
         assertThat(response.content().get(0).type()).isEqualTo(ProductType.BOOK);
         assertThat(response.content().get(0).status()).isEqualTo(ProductStatus.SELLING);
@@ -225,6 +229,7 @@ class ProductServiceTest {
         assertThat(response.productId()).isEqualTo(savedProduct.getId());
         assertThat(response.productName()).isEqualTo("ABC");
         assertThat(response.description()).isEqualTo("책 설명입니다.");
+        assertThat(response.nickname()).isEqualTo("seller1");
         assertThat(response.price()).isEqualTo(10000);
         assertThat(response.stock()).isEqualTo(100);
         assertThat(response.type()).isEqualTo(ProductType.BOOK);

@@ -93,7 +93,7 @@ public class ProductService {
 
         return new ProductPageResponse(
                 content,
-                productPage.getNumber(),
+                productPage.getNumber() + 1,
                 productPage.getSize(),
                 productPage.getTotalElements(),
                 productPage.getTotalPages()

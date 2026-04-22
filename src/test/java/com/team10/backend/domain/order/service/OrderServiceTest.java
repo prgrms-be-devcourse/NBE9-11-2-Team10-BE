@@ -2,6 +2,7 @@ package com.team10.backend.domain.order.service;
 
 import com.team10.backend.domain.order.dto.OrderCreateRequest;
 import com.team10.backend.domain.order.dto.OrderResponse;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,9 @@ public class OrderServiceTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @BeforeEach
     void setUp() {
@@ -73,6 +77,9 @@ public class OrderServiceTest {
         // When
         OrderResponse response = orderService.createOrder(req);
 
+        entityManager.flush();
+        entityManager.clear();
+
         // Then 1: 응답 데이터 검증
         assertThat(response.userId()).isEqualTo(1L);
         assertThat(response.totalAmount()).isEqualTo(2100000); // 총 합계 210만 원
@@ -102,5 +109,13 @@ public class OrderServiceTest {
         // Enum 값 비교 시 DB 저장 형태(String)에 맞춰 대문자로 확인
         assertThat(savedPayment.get("status").toString()).isEqualTo("READY");
         assertThat(((Number) savedPayment.get("total_amount")).intValue()).isEqualTo(2100000);
+
+        Integer stock101 = jdbcTemplate.queryForObject(
+                "SELECT stock FROM products WHERE id = ?", Integer.class, 101L);
+        Integer stock102 = jdbcTemplate.queryForObject(
+                "SELECT stock FROM products WHERE id = ?", Integer.class, 102L);
+
+        assertThat(stock101).isEqualTo(9);
+        assertThat(stock102).isEqualTo(18);
     }
 }

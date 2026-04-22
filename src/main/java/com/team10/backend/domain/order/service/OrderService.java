@@ -89,10 +89,11 @@ public class OrderService {
     public List<OrderProducts> getOrderProductList(OrderCreateRequest request) {
         return request.orderProducts().stream()
                 .map(orderProdctReq->{
-                    Product product = productRepository.findById(orderProdctReq.productId())
+                    Product product = productRepository.findByIdWithPessimisticLock(orderProdctReq.productId())
                             .orElseThrow(() -> new BusinessException(PRODUCT_NOT_FOUND,"상품을 찾을 수 없습니다. ID: " + orderProdctReq.productId()));
 
                     //todo 재고 감소 로직
+                    product.decreaseStock(orderProdctReq.quantity());
 
                     //OrderProduct 테이블에 저장
                     return OrderProducts.builder()
@@ -192,6 +193,7 @@ public class OrderService {
         // 내부적으로 @SQLDelete가 작동하여 'is_deleted = true'로 업데이트함
         //주문 데이터가 삭제된것으로 변경된다. 하드 딜리트가 아니다.
         orderRepository.delete(order);
+        orderRepository.flush();
     }
 
     private void validateOrderDelete(Long userId, Order order) {
@@ -232,6 +234,12 @@ public class OrderService {
             // 필드명이 orderProducts 임을 확인하세요!
             order.getOrderProducts().forEach(orderProduct -> {
                 //Todo 재고 증가 로직
+                Product product = productRepository.findByIdWithPessimisticLock(orderProduct.getProduct().getId())
+                        .orElseThrow(() -> new BusinessException(PRODUCT_NOT_FOUND, "상품을 찾을 수 없습니다. ID: " + orderProduct.getProduct().getId()));
+
+                product.increaseStock(orderProduct.getQuantity());
+                productRepository.saveAndFlush(product);
+
                 // Product 엔티티에 추가한 addStock 호출
 //                orderProduct.getProduct().addStock(orderProduct.getQuantity());
             });
