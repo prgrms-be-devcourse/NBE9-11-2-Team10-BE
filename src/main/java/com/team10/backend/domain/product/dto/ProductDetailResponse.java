@@ -10,6 +10,7 @@ public record ProductDetailResponse(
         String description,
         int price,
         int stock,
+        String nickname,
         String imageUrl,
         ProductType type,
         ProductStatus status
@@ -21,6 +22,7 @@ public record ProductDetailResponse(
                 product.getDescription(),
                 product.getPrice(),
                 product.getStock(),
+                product.getUser().getNickname(),
                 product.getImageUrl(),
                 product.getType(),
                 product.getStatus()

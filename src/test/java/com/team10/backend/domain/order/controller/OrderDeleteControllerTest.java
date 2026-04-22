@@ -1,7 +1,6 @@
 package com.team10.backend.domain.order.controller;
 
 import com.team10.backend.global.exception.ErrorCode;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,12 +8,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.persistence.EntityManager;
+import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -37,7 +36,7 @@ public class OrderDeleteControllerTest {
     void deleteOrder_Success() throws Exception {
         // 1. 유저 및 상품 세팅
         jdbcTemplate.update("INSERT INTO users (id, email, password, name, nickname, phone_number, address, user_status, role) VALUES (1, 'buyer@test.com', '1', '구매자', '구매자', '010', '서울', 'ACTIVE', 'BUYER')");
-        jdbcTemplate.update("INSERT INTO products (id, user_id, product_name, price, stock, type, status) VALUES (101, 1, '상품', 10000, 10, 'BOOK', 'SELLING')");
+        jdbcTemplate.update("INSERT INTO products (id, user_id, product_name, price, stock, type, status) VALUES (101, 1, '상품', 10000, 9, 'BOOK', 'SELLING')");
 
         // 2. 주문 세팅 (READY 상태)
         String orderNum = "ORD-DELETE-001";
@@ -53,6 +52,15 @@ public class OrderDeleteControllerTest {
                 .andDo(print());
 
         // [참고] 환불/재고 로직이 추가되면 여기서 jdbcTemplate으로 재고가 늘어났는지 확인하는 로직을 추가할 예정
+        Integer restoredStock = jdbcTemplate.queryForObject(
+                "SELECT stock FROM products WHERE id = ?", Integer.class, 101L);
+
+        assertEquals(Integer.valueOf(10), restoredStock);
+
+        Map<String, Object> deletedOrder = jdbcTemplate.queryForMap(
+                "SELECT * FROM orders WHERE order_number = ?", orderNum);
+
+        assertEquals(Boolean.TRUE, deletedOrder.get("is_deleted"));
     }
 
     @Test

@@ -30,13 +30,13 @@ public class ProductQueryController {
     @Operation(summary = "상품 전체 조회",
             description = "등록된 상품 목록을 최신순으로 조회하며, 페이지 및 필터 조건을 지원합니다.")
     public ApiResponse<ProductPageResponse> list(
-            @RequestParam(defaultValue = "0") @Min(value = 0, message = "page는 0 이상이어야 합니다.") int page,
+            @RequestParam(defaultValue = "1") @Min(value = 1, message = "page는 1 이상이어야 합니다.") int page,
             @RequestParam(defaultValue = "10") @Min(value = 1, message = "size는 1 이상이어야 합니다.") int size,
             @RequestParam(required = false) ProductType type,
             @RequestParam(required = false) ProductStatus status,
             @RequestParam(required = false) Long sellerId
     ) {
-        ProductPageResponse response = productService.list(page, size, type, status, sellerId);
+        ProductPageResponse response = productService.list(page - 1, size, type, status, sellerId);
         return ApiResponse.ok(response);
     }
 

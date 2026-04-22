@@ -8,16 +8,19 @@ public record ProductListResponse(
         Long productId,
         String productName,
         int price,
+        String nickname,
         String imageUrl,
         ProductType type,
         ProductStatus status,
         Long sellerId
+
 ) {
     public static ProductListResponse from(Product product) {
         return new ProductListResponse(
                 product.getId(),
                 product.getProductName(),
                 product.getPrice(),
+                product.getUser().getNickname(),
                 product.getImageUrl(),
                 product.getType(),
                 product.getStatus(),
