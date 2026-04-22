@@ -72,10 +72,10 @@ public class OrderServiceTest {
         // 아이템 2: 매직 마우스(50,000원) x 2 = 100,000
         OrderCreateRequest.OrderProductReq item2 = new OrderCreateRequest.OrderProductReq(102L, 2);
 
-        OrderCreateRequest req = new OrderCreateRequest(1L, "서울시 강남구 테헤란로", List.of(item1, item2));
+        OrderCreateRequest req = new OrderCreateRequest("서울시 강남구 테헤란로", List.of(item1, item2));
 
         // When
-        OrderResponse response = orderService.createOrder(req);
+        OrderResponse response = orderService.createOrder(1L,req);
 
         entityManager.flush();
         entityManager.clear();

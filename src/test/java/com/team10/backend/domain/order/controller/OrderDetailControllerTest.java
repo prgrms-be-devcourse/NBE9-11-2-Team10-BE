@@ -1,6 +1,8 @@
 package com.team10.backend.domain.order.controller;
 
+import com.team10.backend.domain.user.enums.Role;
 import com.team10.backend.global.exception.ErrorCode;
+import com.team10.backend.global.security.CustomUserPrincipal;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -8,10 +10,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -29,6 +36,19 @@ public class OrderDetailControllerTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    private CustomUserPrincipal getMockUser(Long id, Role role) {
+        return new CustomUserPrincipal(id, role);
+    }
+    // 2. Authentication 객체로 변환 (함수화)
+    private UsernamePasswordAuthenticationToken getAuthentication(Long id, Role role) {
+        CustomUserPrincipal principal = getMockUser(id, role);
+        return new UsernamePasswordAuthenticationToken(
+                principal,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_" + role.name()))
+        );
+    }
 
     @Test
     @DisplayName("구매자 주문 상세 조회 성공 - 구매자 본인의 주문 조회")
@@ -53,7 +73,7 @@ public class OrderDetailControllerTest {
         jdbcTemplate.update("INSERT INTO payments (id, order_id, order_number, total_amount, status) VALUES (901, 501, ?, 10000, 'PAID')", orderNum);
 
         // When & Then
-        mvc.perform(get("/api/v1/orders/{userId}/{orderNumber}", 1L, orderNum))
+        mvc.perform(get("/api/v1/orders/{orderNumber}", orderNum).with(authentication(getAuthentication(1L, Role.BUYER))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.orderNumber").value(orderNum))
                 .andExpect(jsonPath("$.data.delivery.deliveryAddress").value("서울시 강남구"))
@@ -83,7 +103,7 @@ public class OrderDetailControllerTest {
         jdbcTemplate.update("INSERT INTO payments (id, order_id, order_number, total_amount, status) VALUES (902, 502, ?, 10000, 'PAID')", orderNum);
 
         // When & Then: 판매자 ID(10)로 조회 시 성공해야 함
-        mvc.perform(get("/api/v1/orders/{userId}/{orderNumber}", 10L, orderNum))
+        mvc.perform(get("/api/v1/orders/{orderNumber}", orderNum).with(authentication(getAuthentication(10L, Role.SELLER))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.orderNumber").value(orderNum))
                 .andExpect(jsonPath("$.data.orderItems[0].productName").value("맥북"))
@@ -111,7 +131,7 @@ public class OrderDetailControllerTest {
         jdbcTemplate.update("INSERT INTO users (id, email, password, name, nickname, phone_number, address, user_status, role) VALUES (2, 'thief@test.com', '1', '박구매', '박박', '010', '인천', 'ACTIVE', 'BUYER')");
 
         // When & Then: 유저 2(2L)가 유저 1의 주문번호로 조회 시도
-        mvc.perform(get("/api/v1/orders/{userId}/{orderNumber}", 2L, "ORD-DETAIL-001"))
+        mvc.perform(get("/api/v1/orders/{orderNumber}", "ORD-DETAIL-001").with(authentication(getAuthentication(2L, Role.BUYER))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.errorCode").value(ErrorCode.ACCESS_DENIED.getCode()))
                 .andDo(print());
@@ -142,7 +162,7 @@ public class OrderDetailControllerTest {
         jdbcTemplate.update("INSERT INTO users (id, email, password, name, nickname, phone_number, address, user_status, role) VALUES (11, 'sellerB@test.com', '1', '김판매', 'B판매', '010', '대구', 'ACTIVE', 'SELLER')");
 
         // When & Then: 판매자 B(11L)가 판매자 A의 상품만 담긴 주문 조회 시도
-        mvc.perform(get("/api/v1/orders/{userId}/{orderNumber}", 11L, "ORD-SELLER-001"))
+        mvc.perform(get("/api/v1/orders/{orderNumber}", "ORD-SELLER-001").with(authentication(getAuthentication(11L, Role.SELLER))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.errorCode").value(ErrorCode.ACCESS_DENIED.getCode()))
                 .andDo(print());
@@ -150,7 +170,7 @@ public class OrderDetailControllerTest {
     @Test
     @DisplayName("주문 상세 조회 실패 - 존재하지 않는 주문 번호")
     void getOrderDetail_OrderNotFound() throws Exception {
-        mvc.perform(get("/api/v1/orders/{userId}/{orderNumber}", 1L, "NON-EXIST-ORD"))
+        mvc.perform(get("/api/v1/orders/{orderNumber}", "NON-EXIST-ORD").with(authentication(getAuthentication(1L, Role.BUYER))))
                 .andExpect(status().isNotFound())
                 .andDo(print())
                 .andExpect(status().isNotFound())

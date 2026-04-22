@@ -1,16 +1,21 @@
 package com.team10.backend.domain.order.controller;
 
+import com.team10.backend.domain.user.enums.Role;
 import com.team10.backend.global.exception.ErrorCode;
+import com.team10.backend.global.security.CustomUserPrincipal;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,6 +35,19 @@ public class OrderDeleteControllerTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    private CustomUserPrincipal getMockUser(Long id, Role role) {
+        return new CustomUserPrincipal(id, role);
+    }
+    // 2. Authentication 객체로 변환 (함수화)
+    private UsernamePasswordAuthenticationToken getAuthentication(Long id, Role role) {
+        CustomUserPrincipal principal = getMockUser(id, role);
+        return new UsernamePasswordAuthenticationToken(
+                principal,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_" + role.name()))
+        );
+    }
 
     @Test
     @DisplayName("주문 삭제 성공 - 결제 대기 상태의 주문을 취소")
