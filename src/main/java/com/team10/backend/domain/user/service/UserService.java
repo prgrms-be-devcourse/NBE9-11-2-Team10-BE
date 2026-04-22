@@ -85,37 +85,19 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponse updateMyUserProfileImage(Long id, ProfileImageUpdateRequest request) {
+    public UserResponse updateMyProfileImage(Long id, ProfileImageUpdateRequest request) {
         User user = getUserEntity(id);
         updateProfileImage(user, request.imageUrl());
-
         return UserResponse.from(user);
     }
 
-    @Transactional
-    public SellerResponse updateMySellerProfileImage(Long id, ProfileImageUpdateRequest request) {
-        User user = getUserEntity(id);
-        validateSellerRole(user);
-        updateProfileImage(user, request.imageUrl());
-
-        return SellerResponse.from(user);
-    }
 
     @Transactional
-    public UserResponse deleteMyUserProfileImage(Long id) {
+    public UserResponse deleteMyProfileImage(Long id) {
         User user = getUserEntity(id);
         updateProfileImage(user, null);
 
         return UserResponse.from(user);
-    }
-
-    @Transactional
-    public SellerResponse deleteMySellerProfileImage(Long id) {
-        User user = getUserEntity(id);
-        validateSellerRole(user);
-        updateProfileImage(user, null);
-
-        return SellerResponse.from(user);
     }
 
     private User getUserEntity(Long userId) {

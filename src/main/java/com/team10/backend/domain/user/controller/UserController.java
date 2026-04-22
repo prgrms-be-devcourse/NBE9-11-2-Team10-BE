@@ -83,32 +83,6 @@ public class UserController {
         return ApiResponse.ok(response);
     }
 
-    @PutMapping("/users/me/profile-image")
-    @PreAuthorize("hasRole('BUYER')")
-    @Operation(
-            summary = "내 사용자 프로필 이미지 수정",
-            description = "로그인한 BUYER 본인의 프로필 이미지를 수정합니다.")
-    public ApiResponse<UserResponse> updateMyUserProfileImage(
-            @AuthenticationPrincipal CustomUserPrincipal principal,
-            @Valid @RequestBody ProfileImageUpdateRequest request
-    ) {
-        UserResponse response = userService.updateMyUserProfileImage(principal.userId(), request);
-
-        return ApiResponse.ok(response);
-    }
-
-    @DeleteMapping("/users/me/profile-image")
-    @PreAuthorize("hasRole('BUYER')")
-    @Operation(
-            summary = "내 사용자 프로필 이미지 삭제",
-            description = "로그인한 BUYER 본인의 프로필 이미지를 삭제합니다.")
-    public ApiResponse<UserResponse> deleteMyUserProfileImage(
-            @AuthenticationPrincipal CustomUserPrincipal principal
-    ) {
-        UserResponse response = userService.deleteMyUserProfileImage(principal.userId());
-
-        return ApiResponse.ok(response);
-    }
 
     @PutMapping("/sellers/me")
     @PreAuthorize("hasRole('SELLER')")
@@ -124,30 +98,28 @@ public class UserController {
         return ApiResponse.ok(response);
     }
 
-    @PutMapping("/sellers/me/profile-image")
-    @PreAuthorize("hasRole('SELLER')")
+    @PutMapping("/me/profile-image")
+    @PreAuthorize("isAuthenticated()")
     @Operation(
-            summary = "내 판매자 프로필 이미지 수정",
-            description = "로그인한 SELLER 본인의 프로필 이미지를 수정합니다.")
-    public ApiResponse<SellerResponse> updateMySellerProfileImage(
+            summary = "내 프로필 이미지 수정",
+            description = "로그인한 본인의 프로필 이미지를 수정합니다.")
+    public ApiResponse<UserResponse> updateMyProfileImage(
             @AuthenticationPrincipal CustomUserPrincipal principal,
             @Valid @RequestBody ProfileImageUpdateRequest request
     ) {
-        SellerResponse response = userService.updateMySellerProfileImage(principal.userId(), request);
-
+        UserResponse response = userService.updateMyProfileImage(principal.userId(), request);
         return ApiResponse.ok(response);
     }
 
-    @DeleteMapping("/sellers/me/profile-image")
-    @PreAuthorize("hasRole('SELLER')")
+    @DeleteMapping("/me/profile-image")
+    @PreAuthorize("isAuthenticated()")
     @Operation(
-            summary = "내 판매자 프로필 이미지 삭제",
-            description = "로그인한 SELLER 본인의 프로필 이미지를 삭제합니다.")
-    public ApiResponse<SellerResponse> deleteMySellerProfileImage(
+            summary = "내 프로필 이미지 삭제",
+            description = "로그인한 본인의 프로필 이미지를 삭제합니다.")
+    public ApiResponse<UserResponse> deleteMyProfileImage(
             @AuthenticationPrincipal CustomUserPrincipal principal
     ) {
-        SellerResponse response = userService.deleteMySellerProfileImage(principal.userId());
-
+        UserResponse response = userService.deleteMyProfileImage(principal.userId());
         return ApiResponse.ok(response);
     }
 

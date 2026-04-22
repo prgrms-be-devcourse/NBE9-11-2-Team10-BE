@@ -122,7 +122,7 @@ public class UserServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
-        UserResponse response = userService.updateMyUserProfileImage(1L, request);
+        UserResponse response = userService.updateMyProfileImage(1L, request);
 
         assertEquals("https://new-image.test/profile.jpg", response.imageUrl());
         verify(imageUploadService).deleteIfManaged("https://old-image.test/profile.jpg");
@@ -136,7 +136,7 @@ public class UserServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
-        UserResponse response = userService.deleteMyUserProfileImage(1L);
+        UserResponse response = userService.deleteMyProfileImage(1L);
 
         assertNull(response.imageUrl());
         verify(imageUploadService).deleteIfManaged("https://old-image.test/profile.jpg");
