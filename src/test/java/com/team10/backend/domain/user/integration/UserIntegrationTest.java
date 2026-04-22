@@ -1,6 +1,7 @@
 package com.team10.backend.domain.user.integration;
 
 import com.team10.backend.domain.user.controller.UserController;
+import com.team10.backend.domain.user.dto.ProfileImageUpdateRequest;
 import com.team10.backend.domain.user.dto.SellerUpdateRequest;
 import com.team10.backend.domain.user.dto.UserUpdateRequest;
 import com.team10.backend.domain.user.entity.User;
@@ -20,6 +21,8 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
+import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -96,6 +99,53 @@ public class UserIntegrationTest {
     }
 
     @Test
+    @DisplayName("유저 프로필 이미지 수정 - 성공")
+    @WithMockUser(roles = "BUYER")
+    void updateUserProfileImage_success() throws Exception {
+        User user = UserTestFixture.createBuyer();
+        user.updateProfileImage("https://test.com/profile.jpg");
+        userRepository.save(user);
+
+        AuthTestHelper.setAuth(user);
+
+        ProfileImageUpdateRequest request =
+                new ProfileImageUpdateRequest("https://test.com/new-profile.jpg");
+
+        ResultActions resultActions = mvc.perform(
+                        put("/api/v1/users/me/profile-image")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andDo(print());
+
+        resultActions
+                .andExpect(handler().handlerType(UserController.class))
+                .andExpect(handler().methodName("updateMyUserProfileImage"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.imageUrl").value("https://test.com/new-profile.jpg"));
+    }
+
+    @Test
+    @DisplayName("유저 프로필 이미지 삭제 - 성공")
+    @WithMockUser(roles = "BUYER")
+    void deleteUserProfileImage_success() throws Exception {
+        User user = UserTestFixture.createBuyer();
+        user.updateProfileImage("https://test.com/profile.jpg");
+        userRepository.save(user);
+
+        AuthTestHelper.setAuth(user);
+
+        ResultActions resultActions = mvc.perform(delete("/api/v1/users/me/profile-image"))
+                .andDo(print());
+
+        resultActions
+                .andExpect(handler().handlerType(UserController.class))
+                .andExpect(handler().methodName("deleteMyUserProfileImage"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.imageUrl").value(nullValue()));
+    }
+
+    @Test
     @DisplayName("판매자 API 접근 실패 - BUYER")
     @WithMockUser(roles = "BUYER")
     void getSellerProfile_fail() throws Exception {
@@ -164,5 +214,52 @@ public class UserIntegrationTest {
                 .andExpect(jsonPath("$.data.nickname").value("새로운판매자"))
                 .andExpect(jsonPath("$.data.bio").value("새로운 소개입니다"))
                 .andExpect(jsonPath("$.data.businessNumber").value("999-99-99999"));
+    }
+
+    @Test
+    @DisplayName("판매자 프로필 이미지 수정 - 성공")
+    @WithMockUser(roles = "SELLER")
+    void updateSellerProfileImage_success() throws Exception {
+        User user = UserTestFixture.createSeller();
+        user.updateProfileImage("https://test.com/seller-profile.jpg");
+        userRepository.save(user);
+
+        AuthTestHelper.setAuth(user);
+
+        ProfileImageUpdateRequest request =
+                new ProfileImageUpdateRequest("https://test.com/new-seller-profile.jpg");
+
+        ResultActions resultActions = mvc.perform(
+                        put("/api/v1/sellers/me/profile-image")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andDo(print());
+
+        resultActions
+                .andExpect(handler().handlerType(UserController.class))
+                .andExpect(handler().methodName("updateMySellerProfileImage"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.imageUrl").value("https://test.com/new-seller-profile.jpg"));
+    }
+
+    @Test
+    @DisplayName("판매자 프로필 이미지 삭제 - 성공")
+    @WithMockUser(roles = "SELLER")
+    void deleteSellerProfileImage_success() throws Exception {
+        User user = UserTestFixture.createSeller();
+        user.updateProfileImage("https://test.com/seller-profile.jpg");
+        userRepository.save(user);
+
+        AuthTestHelper.setAuth(user);
+
+        ResultActions resultActions = mvc.perform(delete("/api/v1/sellers/me/profile-image"))
+                .andDo(print());
+
+        resultActions
+                .andExpect(handler().handlerType(UserController.class))
+                .andExpect(handler().methodName("deleteMySellerProfileImage"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.imageUrl").value(nullValue()));
     }
 }

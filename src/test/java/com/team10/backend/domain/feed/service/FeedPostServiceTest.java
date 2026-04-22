@@ -1,7 +1,7 @@
 package com.team10.backend.domain.feed.service;
 
 import com.team10.backend.domain.feed.dto.post.CreateFeedRequestDto;
-import com.team10.backend.domain.feed.dto.post.CreateFeedResponseDto;
+import com.team10.backend.domain.feed.dto.post.FeedResponseDto;
 import com.team10.backend.domain.feed.dto.post.FeedLikeToggleResponseDto;
 import com.team10.backend.domain.feed.dto.post.FeedListResponseDto;
 import com.team10.backend.domain.feed.dto.post.UpdateFeedRequestDto;
@@ -135,7 +135,7 @@ public class FeedPostServiceTest {
         );
 
 
-        CreateFeedResponseDto result = feedPostService.createFeed(requestDto, testUser.getId());
+        FeedResponseDto result = feedPostService.createFeed(requestDto, testUser.getId());
 
 
         assertThat(result.feedId()).isNotNull();

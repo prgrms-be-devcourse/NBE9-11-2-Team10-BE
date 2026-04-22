@@ -1,7 +1,7 @@
 package com.team10.backend.domain.feed.service;
 
 import com.team10.backend.domain.feed.dto.post.CreateFeedRequestDto;
-import com.team10.backend.domain.feed.dto.post.CreateFeedResponseDto;
+import com.team10.backend.domain.feed.dto.post.FeedResponseDto;
 import com.team10.backend.domain.feed.dto.post.FeedDto;
 import com.team10.backend.domain.feed.dto.post.FeedLikeToggleResponseDto;
 import com.team10.backend.domain.feed.dto.post.FeedListResponseDto;
@@ -55,7 +55,7 @@ public class FeedPostService {
 
     @Transactional
     // 피드는 판매자만 생성할 수 있다.
-    public CreateFeedResponseDto createFeed(CreateFeedRequestDto requestDto, Long currentUserId) {
+    public FeedResponseDto createFeed(CreateFeedRequestDto requestDto, Long currentUserId) {
         User currentUser = getUser(currentUserId);
         validateSeller(currentUser);
 
@@ -66,7 +66,7 @@ public class FeedPostService {
         );
 
         FeedPost savedFeed = feedPostRepository.save(feedPost);
-        return CreateFeedResponseDto.from(savedFeed);
+        return FeedResponseDto.from(savedFeed);
     }
 
     @Transactional
@@ -161,7 +161,14 @@ public class FeedPostService {
     private String extractThumbnailUrl(CreateFeedRequestDto requestDto) {
         return requestDto.mediaUrls() != null && !requestDto.mediaUrls().isEmpty()
                 ? requestDto.mediaUrls().getFirst()
-                : "";
+                : null;
+    }
+
+    // 수정 요청에서도 대표 이미지로 첫 번째 URL만 사용한다.
+    private String extractThumbnailUrl(UpdateFeedRequestDto requestDto) {
+        return requestDto.mediaUrls() != null && !requestDto.mediaUrls().isEmpty()
+                ? requestDto.mediaUrls().getFirst()
+                : null;
     }
 
     // 현재 로그인 사용자의 좋아요 여부를 포함해 FeedDto로 변환한다.
@@ -178,13 +185,6 @@ public class FeedPostService {
 
         return feed.getFeedLikes().stream()
                 .anyMatch(like -> like.getUser().getId().equals(currentUser.getId()));
-    }
-
-    // 수정 요청에서도 대표 이미지로 첫 번째 URL만 사용한다.
-    private String extractThumbnailUrl(UpdateFeedRequestDto requestDto) {
-        return requestDto.mediaUrls() != null && !requestDto.mediaUrls().isEmpty()
-                ? requestDto.mediaUrls().getFirst()
-                : "";
     }
 
     // 좋아요가 이미 있으면 취소하고, 없으면 새로 생성한다.

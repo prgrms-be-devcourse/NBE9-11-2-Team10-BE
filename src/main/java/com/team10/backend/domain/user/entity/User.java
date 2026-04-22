@@ -85,4 +85,8 @@ public class User extends BaseEntity {
         this.address = address;
     }
 
+    public void updateProfileImage(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
 }

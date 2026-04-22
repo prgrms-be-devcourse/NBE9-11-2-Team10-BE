@@ -1,5 +1,6 @@
 package com.team10.backend.domain.product.service;
 
+import com.team10.backend.domain.image.service.ImageUploadService;
 import com.team10.backend.domain.product.dto.ProductCreateRequest;
 import com.team10.backend.domain.product.dto.ProductDetailResponse;
 import com.team10.backend.domain.product.dto.ProductInactiveResponse;
@@ -23,10 +24,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 @Transactional
@@ -44,6 +48,9 @@ class ProductServiceTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @MockitoBean
+    private ImageUploadService imageUploadService;
 
     @BeforeEach
     void setUp() {
@@ -104,6 +111,27 @@ class ProductServiceTest {
         assertThat(response.imageUrl()).isNull();
         assertThat(response.status()).isEqualTo(ProductStatus.SELLING);
         assertThat(productRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("상품 생성 시 imageUrl이 있으면 저장")
+    void createProduct_withImageUrl() {
+        ProductCreateRequest request = new ProductCreateRequest(
+                "이미지 상품",
+                "이미지 있는 상품입니다.",
+                10000,
+                100,
+                "https://example.com/product.jpg",
+                ProductType.BOOK
+        );
+
+        ProductDetailResponse response = productService.create(1L, request);
+
+        assertThat(response.productName()).isEqualTo("이미지 상품");
+        assertThat(response.imageUrl()).isEqualTo("https://example.com/product.jpg");
+
+        Product product = productRepository.findById(response.productId()).orElseThrow();
+        assertThat(product.getImageUrl()).isEqualTo("https://example.com/product.jpg");
     }
 
     @Test
@@ -245,6 +273,69 @@ class ProductServiceTest {
         assertThat(response.imageUrl()).isEqualTo("https://example.com/new.jpg");
         assertThat(response.type()).isEqualTo(ProductType.EBOOK);
         assertThat(response.status()).isEqualTo(ProductStatus.SOLD_OUT);
+        verify(imageUploadService).deleteIfManaged("https://example.com/old.jpg");
+    }
+
+    @Test
+    @DisplayName("상품 수정 시 imageUrl이 null이면 상품 이미지 삭제 - 성공")
+    void updateProduct_deleteImageWhenImageUrlIsNull_success() {
+        User user = userRepository.findById(1L).orElseThrow();
+
+        Product savedProduct = productRepository.save(new Product(
+                user,
+                ProductType.BOOK,
+                "기존 상품명",
+                "기존 설명",
+                10000,
+                10,
+                "https://example.com/old.jpg"
+        ));
+
+        ProductUpdateRequest request = new ProductUpdateRequest(
+                "수정된 상품명",
+                "수정된 설명",
+                12000,
+                null,
+                ProductType.EBOOK,
+                ProductStatus.SELLING
+        );
+
+        ProductDetailResponse response = productService.update(1L, savedProduct.getId(), request);
+
+        assertThat(response.productId()).isEqualTo(savedProduct.getId());
+        assertThat(response.imageUrl()).isNull();
+        verify(imageUploadService).deleteIfManaged("https://example.com/old.jpg");
+    }
+
+    @Test
+    @DisplayName("상품 수정 시 imageUrl이 같으면 기존 이미지 삭제하지 않음")
+    void updateProduct_skipImageDeleteWhenImageUrlIsSame_success() {
+        User user = userRepository.findById(1L).orElseThrow();
+
+        Product savedProduct = productRepository.save(new Product(
+                user,
+                ProductType.BOOK,
+                "기존 상품명",
+                "기존 설명",
+                10000,
+                10,
+                "https://example.com/same.jpg"
+        ));
+
+        ProductUpdateRequest request = new ProductUpdateRequest(
+                "수정된 상품명",
+                "수정된 설명",
+                12000,
+                "https://example.com/same.jpg",
+                ProductType.EBOOK,
+                ProductStatus.SELLING
+        );
+
+        ProductDetailResponse response = productService.update(1L, savedProduct.getId(), request);
+
+        assertThat(response.productId()).isEqualTo(savedProduct.getId());
+        assertThat(response.imageUrl()).isEqualTo("https://example.com/same.jpg");
+        verify(imageUploadService, never()).deleteIfManaged("https://example.com/same.jpg");
     }
 
     @Test

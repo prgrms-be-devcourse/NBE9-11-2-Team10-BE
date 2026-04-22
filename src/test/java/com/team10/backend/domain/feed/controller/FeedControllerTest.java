@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -96,7 +97,32 @@ public class FeedControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isCreated()) // 201 확인
-                .andExpect(jsonPath("$.data.content").value("오늘의 새로운 소식!"));
+                .andExpect(jsonPath("$.data.content").value("오늘의 새로운 소식!"))
+                .andExpect(jsonPath("$.data.mediaUrls[0]").value("https://image.url/1"));
+
+        assertThat(feedPostRepository.findAll().getFirst().getImageUrl())
+                .isEqualTo("https://image.url/1");
+    }
+
+    @Test
+    @DisplayName("피드 등록 시 이미지가 없으면 imageUrl은 null")
+    void createFeed_withoutImageUrl() throws Exception {
+        String requestBody = """
+            {
+              "content": "이미지 없는 소식!",
+              "mediaUrls": []
+            }
+            """;
+
+        mockMvc.perform(post("/api/v1/stores/me/feeds")
+                        .with(authenticatedUser(1L, Role.SELLER))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.content").value("이미지 없는 소식!"))
+                .andExpect(jsonPath("$.data.mediaUrls").isEmpty());
+
+        assertThat(feedPostRepository.findAll().getFirst().getImageUrl()).isNull();
     }
 
     @Test

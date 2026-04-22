@@ -1,5 +1,7 @@
 package com.team10.backend.domain.user.service;
 
+import com.team10.backend.domain.image.service.ImageUploadService;
+import com.team10.backend.domain.user.dto.ProfileImageUpdateRequest;
 import com.team10.backend.domain.user.dto.SellerPublicResponse;
 import com.team10.backend.domain.user.dto.SellerResponse;
 import com.team10.backend.domain.user.dto.SellerUpdateRequest;
@@ -14,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
+
 import static com.team10.backend.global.exception.ErrorCode.NOT_SELLER;
 import static com.team10.backend.global.exception.ErrorCode.USER_NOT_FOUND;
 
@@ -22,6 +26,7 @@ import static com.team10.backend.global.exception.ErrorCode.USER_NOT_FOUND;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final ImageUploadService imageUploadService;
 
     @Transactional(readOnly = true)
     public UserResponse getUserProfile(Long userId) {
@@ -53,7 +58,7 @@ public class UserService {
                 request.nickname(),
                 request.phoneNumber(),
                 request.address()
-                );
+        );
 
         return UserResponse.from(user);
     }
@@ -79,9 +84,51 @@ public class UserService {
         return SellerResponse.from(user);
     }
 
+    @Transactional
+    public UserResponse updateMyUserProfileImage(Long id, ProfileImageUpdateRequest request) {
+        User user = getUserEntity(id);
+        updateProfileImage(user, request.imageUrl());
+
+        return UserResponse.from(user);
+    }
+
+    @Transactional
+    public SellerResponse updateMySellerProfileImage(Long id, ProfileImageUpdateRequest request) {
+        User user = getUserEntity(id);
+        validateSellerRole(user);
+        updateProfileImage(user, request.imageUrl());
+
+        return SellerResponse.from(user);
+    }
+
+    @Transactional
+    public UserResponse deleteMyUserProfileImage(Long id) {
+        User user = getUserEntity(id);
+        updateProfileImage(user, null);
+
+        return UserResponse.from(user);
+    }
+
+    @Transactional
+    public SellerResponse deleteMySellerProfileImage(Long id) {
+        User user = getUserEntity(id);
+        validateSellerRole(user);
+        updateProfileImage(user, null);
+
+        return SellerResponse.from(user);
+    }
+
     private User getUserEntity(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(USER_NOT_FOUND));
+    }
+
+    private void updateProfileImage(User user, String imageUrl) {
+        String oldImageUrl = user.getImageUrl();
+        if (!Objects.equals(oldImageUrl, imageUrl)) {
+            imageUploadService.deleteIfManaged(oldImageUrl);
+            user.updateProfileImage(imageUrl);
+        }
     }
 
     private void validateSellerRole(User user) {

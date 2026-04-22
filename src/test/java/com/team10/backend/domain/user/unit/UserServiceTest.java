@@ -1,5 +1,7 @@
 package com.team10.backend.domain.user.unit;
 
+import com.team10.backend.domain.image.service.ImageUploadService;
+import com.team10.backend.domain.user.dto.ProfileImageUpdateRequest;
 import com.team10.backend.domain.user.dto.SellerResponse;
 import com.team10.backend.domain.user.dto.SellerUpdateRequest;
 import com.team10.backend.domain.user.dto.UserResponse;
@@ -14,14 +16,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.util.Optional;
 
 import static com.team10.backend.global.exception.ErrorCode.NOT_SELLER;
 import static com.team10.backend.global.exception.ErrorCode.USER_NOT_FOUND;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,6 +32,9 @@ public class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private ImageUploadService imageUploadService;
 
     @InjectMocks
     private UserService userService;
@@ -85,6 +91,7 @@ public class UserServiceTest {
     void updateMyUserProfile_success() {
         // given
         User user = UserTestFixture.createBuyer();
+        user.updateProfileImage("https://old-image.test/profile.jpg");
 
         UserUpdateRequest request = new UserUpdateRequest(
                 "새로운닉네임",
@@ -103,6 +110,38 @@ public class UserServiceTest {
         assertEquals("010-9999-9999", response.phoneNumber());
         assertEquals("부산", response.address());
     }
+
+    @Test
+    @DisplayName("사용자 프로필 이미지 수정 - 성공")
+    void updateMyUserProfileImage_success() {
+        User user = UserTestFixture.createBuyer();
+        user.updateProfileImage("https://old-image.test/profile.jpg");
+
+        ProfileImageUpdateRequest request =
+                new ProfileImageUpdateRequest("https://new-image.test/profile.jpg");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        UserResponse response = userService.updateMyUserProfileImage(1L, request);
+
+        assertEquals("https://new-image.test/profile.jpg", response.imageUrl());
+        verify(imageUploadService).deleteIfManaged("https://old-image.test/profile.jpg");
+    }
+
+    @Test
+    @DisplayName("사용자 프로필 이미지 삭제 - 성공")
+    void deleteMyUserProfileImage_success() {
+        User user = UserTestFixture.createBuyer();
+        user.updateProfileImage("https://old-image.test/profile.jpg");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        UserResponse response = userService.deleteMyUserProfileImage(1L);
+
+        assertNull(response.imageUrl());
+        verify(imageUploadService).deleteIfManaged("https://old-image.test/profile.jpg");
+    }
+
     @Test
     @DisplayName("판매자 개인정보 수정 - 성공")
     void updateMySellerProfile_success() {

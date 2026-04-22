@@ -123,6 +123,7 @@ class ProductCommandControllerTest {
                   "productName": "ABC",
                   "price": 10000,
                   "stock": 100,
+                  "imageUrl": "https://www.exam.com/product.jpg",
                   "type": "BOOK"
                 }
                 """;
@@ -142,6 +143,7 @@ class ProductCommandControllerTest {
                   "productName": "ABC",
                   "price": 10000,
                   "stock": 100,
+                  "imageUrl": "https://www.exam.com/product.jpg",
                   "type": "BOOK"
                 }
                 """;
@@ -155,6 +157,7 @@ class ProductCommandControllerTest {
                 .andExpect(jsonPath("$.data.productName").value("ABC"))
                 .andExpect(jsonPath("$.data.price").value(10000))
                 .andExpect(jsonPath("$.data.stock").value(100))
+                .andExpect(jsonPath("$.data.imageUrl").value("https://www.exam.com/product.jpg"))
                 .andExpect(jsonPath("$.data.type").value("BOOK"))
                 .andExpect(jsonPath("$.data.status").value("SELLING"));
 
@@ -165,6 +168,7 @@ class ProductCommandControllerTest {
         assertThat(product.getProductName()).isEqualTo("ABC");
         assertThat(product.getPrice()).isEqualTo(10000);
         assertThat(product.getStock()).isEqualTo(100);
+        assertThat(product.getImageUrl()).isEqualTo("https://www.exam.com/product.jpg");
         assertThat(product.getType()).isEqualTo(ProductType.BOOK);
         assertThat(product.getStatus()).isEqualTo(ProductStatus.SELLING);
         assertThat(product.getUser().getId()).isEqualTo(1L);
