@@ -59,7 +59,7 @@ public class RefundService {
         String encodedKey = Base64.getEncoder().encodeToString((secretKey + ":").getBytes());
 
         // 1. 멱등성 레코드 조회 또는 생성 (새 트랜잭션)
-        IdempotencyRecord record = idempotencyService.getOrCreateRecord(orderId, RequestType.CANCEL,orderId);
+        IdempotencyRecord record = idempotencyService.getOrCreateRecord3(orderId, RequestType.CANCEL,orderId);
 
         // 2. 이미 성공한 요청이면 저장된 응답 반환
         if (record.getStatus() == IdempotencyStatus.SUCCESS) {

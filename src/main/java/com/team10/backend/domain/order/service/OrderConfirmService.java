@@ -67,28 +67,31 @@ public class OrderConfirmService {
         String orderId = request.orderId();
 
         // 1. 멱등성 레코드 조회 또는 생성 (새 트랜잭션)
-        IdempotencyRecord record = idempotencyService.getOrCreateRecord(orderId, RequestType.PAYMENT,null);
+//        IdempotencyRecord record = idempotencyService.getOrCreateRecord(orderId, RequestType.PAYMENT,null);
+
+        //수정
+        IdempotencyRecord record2 = idempotencyService.getOrCreateRecord3(orderId, RequestType.PAYMENT,null);
 
         // 2. 이미 성공한 요청이면 저장된 응답 반환
-        if (record.getStatus() == IdempotencyStatus.SUCCESS) {
-            return idempotencyService.parseResponse(record.getResponseBody());
+        if (record2.getStatus() == IdempotencyStatus.SUCCESS) {
+            return idempotencyService.parseResponse(record2.getResponseBody());
         }
 
         // 3. 작업 시작 처리 (Atomic Update)(동시 요청 방지)
         // 여기서 false가 나오면 '이미 다른 스레드가 PENDING으로 점유 중'이라는 뜻입니다.
-        boolean canStart = idempotencyService.startProcessing(record);
-
-        if (!canStart) {
-            log.warn("중복된 결제 요청 차단: {}", orderId);
-            throw new BusinessException(ALREADY_PROCESSED_PAYMENT); // "현재 결제가 진행 중입니다."
-        }
+//        boolean canStart = idempotencyService.startProcessing(record);
+//
+//        if (!canStart) {
+//            log.warn("중복된 결제 요청 차단: {}", orderId);
+//            throw new BusinessException(ALREADY_PROCESSED_PAYMENT); // "현재 결제가 진행 중입니다."
+//        }
         // 4.  실패(FAILED) 상태일 때만 새로운 키로 갱신
         // 처음 들어온 PENDING 상태라면 이 단계를 건너뛰고 기존 키를 사용합니다.
-        if (record.getStatus() == IdempotencyStatus.FAILED) {
-            String newTossKey = idempotencyService.generateTossKey(orderId);
-            idempotencyService.updateToPendingWithNewKey(record, newTossKey);
-        }
-        String tossIdempotencyKey = record.getLastTossKey();
+//        if (record.getStatus() == IdempotencyStatus.FAILED) {
+//            String newTossKey = idempotencyService.generateTossKey(orderId);
+//            idempotencyService.updateToPendingWithNewKey(record, newTossKey);
+//        }
+        String tossIdempotencyKey = record2.getLastTossKey();
         headers.set("Idempotency-Key", tossIdempotencyKey+ (testCode != null ? UUID.randomUUID() : ""));
         headers.set("Authorization", "Basic " + encodedKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -99,7 +102,7 @@ public class OrderConfirmService {
             ResponseEntity<TossConfirmResponse> response = restTemplate.postForEntity(TOSS_URL + "/confirm", entity, TossConfirmResponse.class);
             log.info("응답값 확인 {},{}",response,response.getBody());
             // 성공 시 내 DB 업데이트
-            idempotencyService.finalizeRecord(record, IdempotencyStatus.SUCCESS, response.getBody());
+            idempotencyService.finalizeRecord(record2, IdempotencyStatus.SUCCESS, response.getBody());
             return response.getBody();
         } catch (HttpClientErrorException e) {
             // 비즈니스 로직 에러 (4xx)
@@ -107,7 +110,7 @@ public class OrderConfirmService {
             String errorBody = e.getResponseBodyAsString();
             log.info("에러 바디 확인: {}", errorBody); // 추가
             //null을 전달하여 상태만 FAILED로 변경
-            idempotencyService.finalizeRecord(record, IdempotencyStatus.FAILED, null);
+            idempotencyService.finalizeRecord(record2, IdempotencyStatus.FAILED, null);
             handleBusinessError(e.getStatusCode(), errorBody);
            throw e; // unreachable (예외가 던져짐)
 
@@ -117,7 +120,7 @@ public class OrderConfirmService {
             String errorBody = e.getResponseBodyAsString();
             log.error("토스 시스템 에러 (5xx): {}",errorBody);
             //토스 서버 문제이므로 FAILED 처리하여 나중에 다시 시도 가능하게 함
-            idempotencyService.finalizeRecord(record, IdempotencyStatus.FAILED, null);
+            idempotencyService.finalizeRecord(record2, IdempotencyStatus.FAILED, null);
             handleSystemError(e.getStatusCode(), errorBody);
             throw e;
 
@@ -127,6 +130,7 @@ public class OrderConfirmService {
             //2. WEBhook을 사용
             //finalizeRecord를 호출하지 않음으로써 DB의 PENDING 상태를 그대로 유지
             log.error("네트워크 통신 실패: {}", e.getMessage());
+            idempotencyService.markRecordAsUncertain(record2);
             throw e;
         }
     }

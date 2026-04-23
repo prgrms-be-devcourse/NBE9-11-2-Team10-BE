@@ -4,5 +4,6 @@ public enum IdempotencyStatus {
     INIT,
     PENDING,
     SUCCESS,
-    FAILED
+    FAILED,
+    UNCERTAIN//네트워크 오류 상태
 }

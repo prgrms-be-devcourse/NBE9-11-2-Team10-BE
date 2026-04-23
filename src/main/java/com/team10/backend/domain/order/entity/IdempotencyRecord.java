@@ -38,6 +38,9 @@ public class IdempotencyRecord extends BaseEntity {
     @Column
     private String originalOrderId;
 
+    @Version
+    private Long version;
+
     // 초기 생성 시점 (처음 결제 시도)
     public IdempotencyRecord(String orderId, String initialTossKey, RequestType type, String originalOrderId) {
         this.orderId = orderId;
@@ -69,5 +72,13 @@ public class IdempotencyRecord extends BaseEntity {
 
     public void fail() {
         this.status = IdempotencyStatus.FAILED;
+    }
+
+    public void markAsPending() {
+        this.status = IdempotencyStatus.PENDING;
+    }
+
+    public void markAsUncertain() {
+        this.status=IdempotencyStatus.UNCERTAIN;
     }
 }
