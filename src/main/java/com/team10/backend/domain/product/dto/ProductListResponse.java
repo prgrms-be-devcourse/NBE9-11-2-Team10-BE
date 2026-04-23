@@ -4,6 +4,8 @@ import com.team10.backend.domain.product.entity.Product;
 import com.team10.backend.domain.product.enums.ProductStatus;
 import com.team10.backend.domain.product.enums.ProductType;
 
+import java.time.LocalDateTime;
+
 public record ProductListResponse(
         Long productId,
         String productName,
@@ -12,8 +14,9 @@ public record ProductListResponse(
         String imageUrl,
         ProductType type,
         ProductStatus status,
-        Long sellerId
-
+        Long sellerId,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {
     public static ProductListResponse from(Product product) {
         return new ProductListResponse(
@@ -24,7 +27,9 @@ public record ProductListResponse(
                 product.getImageUrl(),
                 product.getType(),
                 product.getStatus(),
-                product.getUser().getId()
+                product.getUser().getId(),
+                product.getCreatedAt(),
+                product.getUpdatedAt()
         );
     }
 }
