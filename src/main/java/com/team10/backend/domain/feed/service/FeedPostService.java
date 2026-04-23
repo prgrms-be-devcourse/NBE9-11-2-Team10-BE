@@ -60,7 +60,7 @@ public class FeedPostService {
         validateSeller(currentUser);
 
         FeedPost feedPost = new FeedPost(
-                extractThumbnailUrl(requestDto),
+                requestDto.imageUrl(),
                 requestDto.content(),
                 currentUser
         );
@@ -80,7 +80,7 @@ public class FeedPostService {
 
         String oldImageUrl = feedPost.getImageUrl();
 
-        String newImageUrl = extractThumbnailUrl(requestDto);
+        String newImageUrl = requestDto.imageUrl();
 
         if (!Objects.equals(oldImageUrl, newImageUrl)) {
             imageUploadService.deleteIfManaged(oldImageUrl);
@@ -155,20 +155,6 @@ public class FeedPostService {
         if (user.getRole() != Role.SELLER) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED);
         }
-    }
-
-    // 멀티 이미지 요청이 와도 대표 이미지로 첫 번째 URL만 사용한다.
-    private String extractThumbnailUrl(CreateFeedRequestDto requestDto) {
-        return requestDto.mediaUrls() != null && !requestDto.mediaUrls().isEmpty()
-                ? requestDto.mediaUrls().getFirst()
-                : null;
-    }
-
-    // 수정 요청에서도 대표 이미지로 첫 번째 URL만 사용한다.
-    private String extractThumbnailUrl(UpdateFeedRequestDto requestDto) {
-        return requestDto.mediaUrls() != null && !requestDto.mediaUrls().isEmpty()
-                ? requestDto.mediaUrls().getFirst()
-                : null;
     }
 
     // 현재 로그인 사용자의 좋아요 여부를 포함해 FeedDto로 변환한다.

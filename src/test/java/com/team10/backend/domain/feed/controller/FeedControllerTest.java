@@ -88,7 +88,7 @@ public class FeedControllerTest {
         String requestBody = """
             {
               "content": "오늘의 새로운 소식!",
-              "mediaUrls": ["https://image.url/1"]
+              "imageUrl": "https://image.url/1"
             }
             """;
 
@@ -98,7 +98,7 @@ public class FeedControllerTest {
                         .content(requestBody))
                 .andExpect(status().isCreated()) // 201 확인
                 .andExpect(jsonPath("$.data.content").value("오늘의 새로운 소식!"))
-                .andExpect(jsonPath("$.data.mediaUrls[0]").value("https://image.url/1"));
+                .andExpect(jsonPath("$.data.imageUrl").value("https://image.url/1"));
 
         assertThat(feedPostRepository.findAll().getFirst().getImageUrl())
                 .isEqualTo("https://image.url/1");
@@ -109,8 +109,7 @@ public class FeedControllerTest {
     void createFeed_withoutImageUrl() throws Exception {
         String requestBody = """
             {
-              "content": "이미지 없는 소식!",
-              "mediaUrls": []
+              "content": "이미지 없는 소식!"
             }
             """;
 
@@ -120,7 +119,7 @@ public class FeedControllerTest {
                         .content(requestBody))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.content").value("이미지 없는 소식!"))
-                .andExpect(jsonPath("$.data.mediaUrls").isEmpty());
+                .andExpect(jsonPath("$.data.imageUrl").isEmpty());
 
         assertThat(feedPostRepository.findAll().getFirst().getImageUrl()).isNull();
     }
@@ -174,7 +173,7 @@ public class FeedControllerTest {
         String requestBody = """
             {
               "content": "수정된 피드입니다",
-              "mediaUrls": ["https://test.com/new-image.jpg"]
+              "imageUrl": "https://test.com/new-image.jpg"
             }
             """;
 
@@ -186,7 +185,7 @@ public class FeedControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.feedId").value(100))
                 .andExpect(jsonPath("$.data.content").value("수정된 피드입니다"))
-                .andExpect(jsonPath("$.data.mediaUrls[0]").value("https://test.com/new-image.jpg"));
+                .andExpect(jsonPath("$.data.imageUrl").value("https://test.com/new-image.jpg"));
     }
 
     @Test
