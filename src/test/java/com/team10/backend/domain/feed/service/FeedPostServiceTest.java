@@ -22,8 +22,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -131,7 +129,7 @@ public class FeedPostServiceTest {
 
         CreateFeedRequestDto requestDto = new CreateFeedRequestDto(
                 "테스트 피드 내용입니다.",
-                List.of("https://test-image.com")
+                "https://test-image.com"
         );
 
 
@@ -140,7 +138,7 @@ public class FeedPostServiceTest {
 
         assertThat(result.feedId()).isNotNull();
         assertThat(result.content()).isEqualTo("테스트 피드 내용입니다.");
-        assertThat(result.mediaUrls().get(0)).isEqualTo("https://test-image.com");
+        assertThat(result.imageUrl()).isEqualTo("https://test-image.com");
         assertThat(feedPostRepository.count()).isEqualTo(1);
     }
 
@@ -160,14 +158,14 @@ public class FeedPostServiceTest {
 
         UpdateFeedRequestDto requestDto = new UpdateFeedRequestDto(
                 "수정된 피드입니다",
-                List.of("https://test.com/new-image.jpg")
+                "https://test.com/new-image.jpg"
         );
 
         UpdateFeedResponseDto result = feedPostService.updateFeed(100L, requestDto, testUser.getId());
 
         assertThat(result.feedId()).isEqualTo(100L);
         assertThat(result.content()).isEqualTo("수정된 피드입니다");
-        assertThat(result.mediaUrls()).containsExactly("https://test.com/new-image.jpg");
+        assertThat(result.imageUrl()).isEqualTo("https://test.com/new-image.jpg");
 
         var updatedFeed = feedPostRepository.findById(100L).orElseThrow();
         assertThat(updatedFeed.getContent()).isEqualTo("수정된 피드입니다");
@@ -190,7 +188,7 @@ public class FeedPostServiceTest {
 
         UpdateFeedRequestDto requestDto = new UpdateFeedRequestDto(
                 "권한 없는 수정입니다",
-                List.of("https://test.com/new-image.jpg")
+                "https://test.com/new-image.jpg"
         );
 
         assertThatThrownBy(() -> feedPostService.updateFeed(101L, requestDto, buyerUser.getId()))
