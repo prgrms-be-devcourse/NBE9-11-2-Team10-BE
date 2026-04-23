@@ -18,8 +18,6 @@ import java.util.List;
 }*/
 public record OrderCreateRequest(
 
-        Long userId,
-
         @NotBlank(message = "배송 주소는 필수입니다")
         String deliveryAddress,
 

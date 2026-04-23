@@ -2,6 +2,10 @@ package com.team10.backend.domain.order.service;
 
 import com.team10.backend.domain.order.dto.confirm.ConfirmRequest;
 import com.team10.backend.domain.order.dto.confirm.TossConfirmResponse;
+import com.team10.backend.domain.order.entity.IdempotencyRecord;
+import com.team10.backend.domain.order.enums.IdempotencyStatus;
+import com.team10.backend.domain.order.enums.RequestType;
+import com.team10.backend.domain.order.repository.IdempotencyRepository;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +17,8 @@ import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.retry.support.RetrySynchronizationManager;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
@@ -20,6 +26,7 @@ import org.springframework.web.client.RestTemplate;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.UUID;
 
@@ -37,10 +44,12 @@ public class OrderConfirmService {
     private final ObjectMapper objectMapper;
 
     private final RestTemplate restTemplate;
+    private final IdempotencyService idempotencyService;
 
     // 1. 재시도 로직
     @Retryable(
             value = { ResourceAccessException.class},
+            exclude = { BusinessException.class },
             maxAttempts = 3,
             backoff = @Backoff(delay = 1000, multiplier = 2)
     )
@@ -54,13 +63,36 @@ public class OrderConfirmService {
         // 시크릿 키 인증 헤더 설정
         String encodedKey = Base64.getEncoder().encodeToString((secretKey + ":").getBytes());
         //todo 네트워크가 끊겼을때 다시 시도할 경우 같은 orderNumber 키로 접근하면 오류가 발생한다.
-        //그래서 orderNumber 뒤에 숫자를 붙여서 새로운 값을 사용. 그 값은 DB에 저장되어야 한다.(필드에 추가)
-        int attempt = RetrySynchronizationManager.getContext() != null
-                ? RetrySynchronizationManager.getContext().getRetryCount()
-                : 0;
-        String idempotencyKey = request.orderId() + "-v" + attempt;
 
-        headers.set("Idempotency-Key", idempotencyKey+ (testCode != null ? UUID.randomUUID() : ""));
+        String orderId = request.orderId();
+
+        // 1. 멱등성 레코드 조회 또는 생성 (새 트랜잭션)
+//        IdempotencyRecord record = idempotencyService.getOrCreateRecord(orderId, RequestType.PAYMENT,null);
+
+        //수정
+        IdempotencyRecord record2 = idempotencyService.getOrCreateRecord3(orderId, RequestType.PAYMENT,null);
+
+        // 2. 이미 성공한 요청이면 저장된 응답 반환
+        if (record2.getStatus() == IdempotencyStatus.SUCCESS) {
+            return idempotencyService.parseResponse(record2.getResponseBody());
+        }
+
+        // 3. 작업 시작 처리 (Atomic Update)(동시 요청 방지)
+        // 여기서 false가 나오면 '이미 다른 스레드가 PENDING으로 점유 중'이라는 뜻입니다.
+//        boolean canStart = idempotencyService.startProcessing(record);
+//
+//        if (!canStart) {
+//            log.warn("중복된 결제 요청 차단: {}", orderId);
+//            throw new BusinessException(ALREADY_PROCESSED_PAYMENT); // "현재 결제가 진행 중입니다."
+//        }
+        // 4.  실패(FAILED) 상태일 때만 새로운 키로 갱신
+        // 처음 들어온 PENDING 상태라면 이 단계를 건너뛰고 기존 키를 사용합니다.
+//        if (record.getStatus() == IdempotencyStatus.FAILED) {
+//            String newTossKey = idempotencyService.generateTossKey(orderId);
+//            idempotencyService.updateToPendingWithNewKey(record, newTossKey);
+//        }
+        String tossIdempotencyKey = record2.getLastTossKey();
+        headers.set("Idempotency-Key", tossIdempotencyKey+ (testCode != null ? UUID.randomUUID() : ""));
         headers.set("Authorization", "Basic " + encodedKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
@@ -69,27 +101,36 @@ public class OrderConfirmService {
         try {
             ResponseEntity<TossConfirmResponse> response = restTemplate.postForEntity(TOSS_URL + "/confirm", entity, TossConfirmResponse.class);
             log.info("응답값 확인 {},{}",response,response.getBody());
+            // 성공 시 내 DB 업데이트
+            idempotencyService.finalizeRecord(record2, IdempotencyStatus.SUCCESS, response.getBody());
             return response.getBody();
         } catch (HttpClientErrorException e) {
             // 비즈니스 로직 에러 (4xx)
             // 사용자의 잔액 부족, 카드 정보 오류 등
             String errorBody = e.getResponseBodyAsString();
             log.info("에러 바디 확인: {}", errorBody); // 추가
+            //null을 전달하여 상태만 FAILED로 변경
+            idempotencyService.finalizeRecord(record2, IdempotencyStatus.FAILED, null);
             handleBusinessError(e.getStatusCode(), errorBody);
-            return null; // unreachable (예외가 던져짐)
+           throw e; // unreachable (예외가 던져짐)
 
         } catch (HttpServerErrorException e) {
             // 시스템 및 서버 에러 (5xx)
             // 토스 서버 장애, 은행 점검 등
             String errorBody = e.getResponseBodyAsString();
+            log.error("토스 시스템 에러 (5xx): {}",errorBody);
+            //토스 서버 문제이므로 FAILED 처리하여 나중에 다시 시도 가능하게 함
+            idempotencyService.finalizeRecord(record2, IdempotencyStatus.FAILED, null);
             handleSystemError(e.getStatusCode(), errorBody);
-            return null;
+            throw e;
 
         } catch (ResourceAccessException e) {
             // [네트워크 에러] - 타임아웃, 커넥션 거부 등
             //1. 재시도 로직
             //2. WEBhook을 사용
+            //finalizeRecord를 호출하지 않음으로써 DB의 PENDING 상태를 그대로 유지
             log.error("네트워크 통신 실패: {}", e.getMessage());
+            idempotencyService.markRecordAsUncertain(record2);
             throw e;
         }
     }
@@ -100,7 +141,7 @@ public class OrderConfirmService {
     public TossConfirmResponse recover(ResourceAccessException e, ConfirmRequest request,String testCode) {
        log.error("결제 승인 최종 실패 - 모든 재시도 소진. 주문번호: {}, 에러: {}",
                 request.orderId(), e.getMessage());
-
+//        idempotencyService.finalizeRecord(record, IdempotencyStatus.FAILED, null);
        //todo 관리자에게 알람
         // 네트워크 장애 시: "결제 확인 중" 상태로 변경하거나 관리자 알림
         throw new BusinessException(ErrorCode.NETWORK_ERROR_FINAL_FAILED);
@@ -170,6 +211,7 @@ public class OrderConfirmService {
         String errorCode = parseErrorCode(errorBody);
 
         log.error("토스페이먼츠 5xx 에러 발생 - Status: {}, Code: {}", status, errorCode);
+        //todo 관리자나 개발자에게 알람이 가는 로직
 
         // 3. 토스 서버 및 은행 점검 문제 (500 계열)
         if (status.is5xxServerError()) {

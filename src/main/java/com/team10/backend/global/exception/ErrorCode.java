@@ -45,6 +45,8 @@ public enum ErrorCode {
     //=== 결제 도메인(6000~6999) ===
     PAYMENT_NOT_FOUND("PAYMENT_001","결제 정보가 존재하지 않습니다.",HttpStatus.NOT_FOUND),
     AMOUNT_MISMATCH("PAYMENT_002","결제 금액이 일치하지 않습니다. 위변조 위험이 있습니다.", HttpStatus.BAD_REQUEST),
+    DUPLICATE_REQUEST("PAYMENT_003","이미 처리 중인 결제입니다",HttpStatus.CONFLICT),
+    IDEMPOTENCY_NOT_FOUND("PAYMENT_004","멱등키를 찾을 수 없습니다.",HttpStatus.NOT_FOUND),
 
     //=== 배송 도메인(7000~7999) ===
     CANNOT_CANCEL_SHIPPING_ORDER("DELIVERY_01","이미 출고된 상품은 취소할 수 없습니다.",HttpStatus.BAD_REQUEST),
@@ -77,11 +79,21 @@ public enum ErrorCode {
     //----승인 시스템 오류(토스측 오류, 500,401..)-----
     FAILED_PAYMENT_INTERNAL_SYSTEM_PROCESSING("TOSS_18","결제가 완료되지 않았어요. 다시 시도해주세요.",HttpStatus.INTERNAL_SERVER_ERROR),
     UNKNOWN_PAYMENT_ERROR("TOSS_19", "내부 시스템 처리 작업이 실패했습니다. 잠시 후 다시 시도해주세요",HttpStatus.INTERNAL_SERVER_ERROR),
-    FAILED_INTERNAL_SYSTEM_PROCESSING("TOSS_20", "결제에 실패했어요. 같은 문제가 반복된다면 은행이나 카드사로 문의해주세요.",HttpStatus.INTERNAL_SERVER_ERROR),
+    FAILED_INTERNAL_SYSTEM_PROCESSING("TOSS_20", "내부 시스템 처리 작업이 실패했습니다. 잠시 후 다시 시도해주세요.",HttpStatus.INTERNAL_SERVER_ERROR),
     //-----네트워크 오류 ------
     //503 서버가 현재 요청을 처리할 수 없음 (일시적 부하 또는 통신 장애).
-    NETWORK_ERROR_FINAL_FAILED("NETWORK_01","결제 결과를 확인할 수 없습니다. 중복 결제를 방지하기 위해 잠시 후 결제 내역을 확인해 주세요.",HttpStatus.SERVICE_UNAVAILABLE);
+    NETWORK_ERROR_FINAL_FAILED("NETWORK_01","결제 결과를 확인할 수 없습니다. 중복 결제를 방지하기 위해 잠시 후 결제 내역을 확인해 주세요.",HttpStatus.SERVICE_UNAVAILABLE),
 
+    //-----취소 비즈니스 오류(400,401,403,404)------
+    UNAUTHORIZED_KEY("TOSS_21","인증되지 않은 시크릿 키 혹은 클라이언트 키 입니다.",HttpStatus.UNAUTHORIZED),
+    NOT_CANCELABLE_PAYMENT("TOSS_21","취소 할 수 없는 결제 입니다.",HttpStatus.FORBIDDEN),
+    ALREADY_CANCELED_PAYMENT("TOSS_22","이미 취소된 결제 입니다.",HttpStatus.NOT_FOUND),
+    INVALID_REFUND_ACCOUNT_NUMBER("TOSS_23","잘못된 환불 계좌번호입니다.",HttpStatus.NOT_FOUND),
+    ALREADY_REFUND_PAYMENT("TOSS_24","이미 환불된 결제입니다.",HttpStatus.NOT_FOUND),
+    REFUND_REJECTED("TOSS_25","환불이 거절됐습니다. 결제사에 문의 부탁드립니다.",HttpStatus.NOT_FOUND),
+
+    //---취소 시스템 에러(500)
+    COMMON_ERROR("TOSS_26","일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",HttpStatus.INTERNAL_SERVER_ERROR);
 
     private final String code;        // 프론트에서 분기용 비즈니스 코드
     private final String message;     // 기본 메시지 (상세 설명은 동적 생성 가능)

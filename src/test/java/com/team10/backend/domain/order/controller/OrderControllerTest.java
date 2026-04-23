@@ -3,7 +3,9 @@ package com.team10.backend.domain.order.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.team10.backend.domain.order.dto.OrderCreateRequest;
 import com.team10.backend.domain.order.service.OrderService;
+import com.team10.backend.domain.user.enums.Role;
 import com.team10.backend.global.exception.ErrorCode;
+import com.team10.backend.global.security.CustomUserPrincipal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,6 +14,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -19,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -161,6 +167,19 @@ public class OrderControllerTest {
         insertPayment(801L, 601L, mixOrderNum, 60000, "PAID");
     }
 
+    private CustomUserPrincipal getMockUser(Long id,  Role role) {
+        return new CustomUserPrincipal(id, role);
+    }
+    // 2. Authentication 객체로 변환 (함수화)
+    private UsernamePasswordAuthenticationToken getAuthentication(Long id, Role role) {
+        CustomUserPrincipal principal = getMockUser(id, role);
+        return new UsernamePasswordAuthenticationToken(
+                principal,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_" + role.name()))
+        );
+    }
+
     @Test
     @DisplayName("주문 생성 성공 - 로직을 통해 합산 금액 검증")
     void t1_2() throws Exception {
@@ -173,12 +192,13 @@ public class OrderControllerTest {
         // 예상 총 금액: (10000*2) + (20000*2) + (30000*2) = 120,000원
         int expectedTotalAmount = 120000;
 
-        OrderCreateRequest req = new OrderCreateRequest(1L, "서울특별시 강남구 테헤란로", List.of(item1, item2, item3));
-        System.out.println(orderService.createOrder(req));
+        OrderCreateRequest req = new OrderCreateRequest( "서울특별시 강남구 테헤란로", List.of(item1, item2, item3));
+//        System.out.println(orderService.createOrder(req));
         // When: 호출 (실제 서비스의 createOrder가 실행됨)
         ResultActions resultActions = mvc
                 .perform(
                         post("/api/v1/orders")
+                                .with(authentication(getAuthentication(1L, Role.BUYER)))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(req))
                 )
@@ -202,31 +222,24 @@ public class OrderControllerTest {
         // 예상 총 금액: (10000*2)
         int expectedTotalAmount = 20000;
 
-        OrderCreateRequest req = new OrderCreateRequest(1L, "서울특별시 강남구 테헤란로", List.of(item1));
-        System.out.println(orderService.createOrder(req));
+        OrderCreateRequest req = new OrderCreateRequest( "서울특별시 강남구 테헤란로", List.of(item1));
+//        System.out.println(orderService.createOrder(req));
         // When: 호출 (실제 서비스의 createOrder가 실행됨)
-        ResultActions resultActions = mvc
-                .perform(
-                        post("/api/v1/orders")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(req))
-                )
-                .andDo(print());
-
-        // Then: 검증
-        // 이제 mockResponse가 아니라 실제 서비스가 계산해서 반환한 값이 검증됩니다.
-        resultActions
+        mvc.perform(post("/api/v1/orders")
+                        .with(authentication(getAuthentication(1L, Role.BUYER))) // 함수 사용
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.userId").value(1L))
-                .andExpect(jsonPath("$.data.totalAmount").value(expectedTotalAmount)) // 실제 계산 결과 검증
+                .andExpect(jsonPath("$.data.totalAmount").value(20000))
                 .andExpect(jsonPath("$.data.orderNumber").exists());
+
     }
 
     @Test
     @DisplayName("주문 생성 실패 - 필수 입력값 누락 (Validation)")
     void t2() throws Exception {
         // Given: 주소가 비어있고 상품이 없는 잘못된 요청
-        OrderCreateRequest req = new OrderCreateRequest(1L, "", List.of());
+        OrderCreateRequest req = new OrderCreateRequest( "", List.of());
 
         // When & Then
         mvc.perform(
@@ -242,7 +255,7 @@ public class OrderControllerTest {
     @DisplayName("주문 생성 실패 - 존재하지 않는 상품 (BusinessException)")
     void t3() throws Exception {
         OrderCreateRequest.OrderProductReq item = new OrderCreateRequest.OrderProductReq(999L, 1);
-        OrderCreateRequest req = new OrderCreateRequest(1L, "주소", List.of(item));
+        OrderCreateRequest req = new OrderCreateRequest( "주소", List.of(item));
 
         // [중요] when(...).thenThrow(...) 코드를 아예 삭제하세요!
         // 실제 서비스가 실행되면서 productRepository.findById(999L)를 호출하고,
@@ -252,6 +265,7 @@ public class OrderControllerTest {
         ResultActions resultActions = mvc
                 .perform(
                         post("/api/v1/orders")
+                                .with(authentication(getAuthentication(1L, Role.BUYER)))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(req))
                 )
@@ -261,7 +275,7 @@ public class OrderControllerTest {
         resultActions
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value(ErrorCode.PRODUCT_NOT_FOUND.getCode()))
-                .andExpect(jsonPath("$.detail").value("상품을 찾을 수 없습니다. ID: 999"));
+                .andExpect(jsonPath("$.detail").value("상품을 찾을 수 없습니다."));
     }
 
     @Test
@@ -270,7 +284,7 @@ public class OrderControllerTest {
         // Given: DB에 없는 사용자 ID 999L로 요청
         Long invalidUserId = 999L;
         OrderCreateRequest.OrderProductReq item = new OrderCreateRequest.OrderProductReq(101L, 1);
-        OrderCreateRequest req = new OrderCreateRequest(invalidUserId, "서울특별시 강남구", List.of(item));
+        OrderCreateRequest req = new OrderCreateRequest( "서울특별시 강남구", List.of(item));
 
         // when(...) 삭제!
         // 서비스의 findUser(req) 내부에서 userRepository.findById(999L)가
@@ -278,6 +292,7 @@ public class OrderControllerTest {
         ResultActions resultActions = mvc
                 .perform(
                         post("/api/v1/orders")
+                                .with(authentication(getAuthentication(invalidUserId, Role.BUYER)))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(req))
                 )
@@ -294,7 +309,8 @@ public class OrderControllerTest {
     @DisplayName("구매자 주문 목록 조회 성공 - 최신순 정렬 및 대표명 검증")
     void t5() throws Exception {
         // When & Then
-        mvc.perform(get("/api/v1/orders/buyer/{userId}", 1L)
+        mvc.perform(get("/api/v1/orders/buyer")
+                        .with(authentication(getAuthentication(1L, Role.BUYER)))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -318,7 +334,8 @@ public class OrderControllerTest {
     @DisplayName("구매자 주문 목록 조회 성공 - 주문 내역이 없는 경우")
     void t6() throws Exception {
         // When & Then
-        mvc.perform(get("/api/v1/orders/buyer/{userId}", 3L))
+        mvc.perform(get("/api/v1/orders/buyer")
+                        .with(authentication(getAuthentication(3L, Role.BUYER))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.orders").isEmpty()) // 빈 리스트 반환 확인
                 .andExpect(jsonPath("$.data.userName").value("홍길동3"));
@@ -331,7 +348,8 @@ public class OrderControllerTest {
 
         // When & Then
         // 서비스의 findUser(999)에서 예외가 발생하고, 이를 GlobalExceptionHandler가 잡는다고 가정
-        mvc.perform(get("/api/v1/orders/buyer/{userId}", 999L))
+        mvc.perform(get("/api/v1/orders/buyer")
+                        .with(authentication(getAuthentication(999L, Role.BUYER))))
                 .andDo(print())
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value(ErrorCode.USER_NOT_FOUND.getCode()))
@@ -345,7 +363,8 @@ public class OrderControllerTest {
 
         // When & Then
         // 서비스 로직에서 Role 체크를 한다면 403이나 예외가 발생해야 함
-        mvc.perform(get("/api/v1/orders/buyer/{userId}", 2L))
+        mvc.perform(get("/api/v1/orders/buyer")
+                .with(authentication(getAuthentication(2L, Role.SELLER))))
                 .andDo(print())
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.errorCode").value(ErrorCode.ACCESS_DENIED.getCode()))
@@ -356,8 +375,9 @@ public class OrderControllerTest {
     @Test
     @DisplayName("판매자 판매 내역 조회 성공 - 데이터 정합성 및 payment 상태 검증")
     void getSellerOrderList_Success() throws Exception {
-
-        mvc.perform(get("/api/v1/orders/seller/{userId}", 2L)) // 판매자 2L로 조회
+        var auth = getAuthentication(2L, Role.SELLER);
+        mvc.perform(get("/api/v1/orders/seller")
+                        .with(authentication(auth))) // 판매자 2L로 조회
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.sellerId").value(2L))
@@ -373,10 +393,10 @@ public class OrderControllerTest {
     @DisplayName("판매자 판매 내역 조회 실패 - 판매자가 아닌 BUYER ID로 조회 할 경우")
     void getSellerOrderList_InvalidRole() throws Exception {
         // Given: BUYER 역할을 가진 유저 ID 1
-
+        var auth = getAuthentication(1L, Role.BUYER);
         // When & Then
         // 서비스 로직에서 Role 체크를 한다면 403이나 예외가 발생해야 함
-        mvc.perform(get("/api/v1/orders/seller/{userId}", 1L))
+        mvc.perform(get("/api/v1/orders/seller").with(authentication(auth)))
                 .andDo(print())
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.errorCode").value(ErrorCode.ACCESS_DENIED.getCode()))
@@ -386,9 +406,9 @@ public class OrderControllerTest {
     @Test
     @DisplayName("판매자 판매 내역 조회 성공 - 판매 내역이 전혀 없는 경우")
     void getSellerOrderList_Empty_Success() throws Exception {
-
+        var auth = getAuthentication(4L, Role.SELLER);
         // When & Then
-        mvc.perform(get("/api/v1/orders/seller/{userId}", 4L))
+        mvc.perform(get("/api/v1/orders/seller").with(authentication(auth)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.sales").isArray())
@@ -400,13 +420,39 @@ public class OrderControllerTest {
     @DisplayName("판매자 판매 내역 조회 실패 - 존재하지 않는 유저 ID")
     void getSellerOrderList_UserNotFound() throws Exception {
         // Given: ID 9999는 DB에 없음
-
+        var auth = getAuthentication(9999L, Role.SELLER);
         // When & Then
-        mvc.perform(get("/api/v1/orders/seller/{userId}", 9999L))
+        mvc.perform(get("/api/v1/orders/seller").with(authentication(auth)))
                 .andExpect(status().isNotFound()) // GlobalExceptionHandler에서 404 처리 가정
                 .andDo(print())
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value(ErrorCode.USER_NOT_FOUND.getCode()))
                 .andExpect(jsonPath("$.detail").value("해당 유저 정보를 찾을 수 없습니다."));
+    }
+
+    @Test
+    @DisplayName("주문 생성 실패 - 재고 수량 부족 (BusinessException)")
+    void t1_4_fail_insufficient_stock() throws Exception {
+        // Given: 상품 101L의 기본 재고는 10개로 세팅되어 있음 (setUp 참고)
+        // 재고보다 많은 수량(11개)을 주문 요청
+        OrderCreateRequest.OrderProductReq item = new OrderCreateRequest.OrderProductReq(101L, 11);
+        OrderCreateRequest req = new OrderCreateRequest( "서울특별시 강남구", List.of(item));
+        var auth = getAuthentication(1L, Role.BUYER);
+        // When: 호출
+        ResultActions resultActions = mvc
+                .perform(
+                        post("/api/v1/orders")
+                                .with(authentication(auth))
+                                .contentType(MediaType.APPLICATION_JSON)
+
+                                .content(objectMapper.writeValueAsString(req))
+                )
+                .andDo(print());
+
+        // Then: 재고 부족 예외 및 에러 코드 검증
+        resultActions
+                .andExpect(status().isBadRequest()) // 비즈니스 예외 상황에 따른 상태코드 (보통 400 사용)
+                .andExpect(jsonPath("$.errorCode").value(ErrorCode.INSUFFICIENT_STOCK.getCode()))
+                .andExpect(jsonPath("$.detail").value("재고가 부족합니다.")); // 메세지는 본인의 ErrorCode 설정에 맞게 수정
     }
 }

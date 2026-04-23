@@ -21,6 +21,7 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -41,7 +42,8 @@ class OrderConfirmServiceTest {
     @DisplayName("403 Forbidden 관련 모든 에러 케이스 검증")
     void confirmPayment_fail_forbiddenGroup2(String errorCode) {
         // 1. Given: RestTemplate이 HttpClientErrorException(403)을 던지도록 설정
-        ConfirmRequest request = new ConfirmRequest("test_key", "order_id", 5000L);
+        String uniqueOrderId = "order_" + UUID.randomUUID().toString().substring(0, 8);
+        ConfirmRequest request = new ConfirmRequest("test_key", uniqueOrderId, 5000L);
 
         // Toss 에러 응답 바디 시뮬레이션 (ErrorCode.name()이 포함되도록)
         String errorResponseBody = "{\"code\":\"" + errorCode + "\", \"message\":\"테스트 에러\"}";
@@ -80,7 +82,8 @@ class OrderConfirmServiceTest {
     @DisplayName("404 Not Found 관련 모든 에러 케이스 검증")
     void confirmPayment_fail_notFoundGroup(String errorCode) {
         // 1. Given: RestTemplate이 HttpClientErrorException(404)을 던지도록 설정
-        ConfirmRequest request = new ConfirmRequest("test_key", "order_id", 5000L);
+        String uniqueOrderId = "order_" + UUID.randomUUID().toString().substring(0, 8);
+        ConfirmRequest request = new ConfirmRequest("test_key", uniqueOrderId, 5000L);
 
         // Toss 에러 응답 바디 시뮬레이션
         String errorResponseBody = "{\"code\":\"" + errorCode + "\", \"message\":\"테스트 에러\"}";
@@ -130,7 +133,8 @@ class OrderConfirmServiceTest {
     @DisplayName("400 Bad Request 관련 모든 에러 케이스 검증")
     void confirmPayment_fail_badRequestGroup(String errorCode) {
         // 1. Given: RestTemplate이 HttpClientErrorException(400)을 던지도록 설정
-        ConfirmRequest request = new ConfirmRequest("test_key", "order_id", 5000L);
+        String uniqueOrderId = "order_" + UUID.randomUUID().toString().substring(0, 8);
+        ConfirmRequest request = new ConfirmRequest("test_key", uniqueOrderId, 5000L);
 
         // Toss 에러 응답 바디 시뮬레이션 (ErrorCode 포함)
         String errorResponseBody = "{\"code\":\"" + errorCode + "\", \"message\":\"테스트 에러(400)\"}";
@@ -173,7 +177,8 @@ class OrderConfirmServiceTest {
     @DisplayName("500 Server Error 관련 모든 에러 케이스 검증")
     void confirmPayment_fail_serverErrorGroup(String errorCode) {
         // 1. Given: RestTemplate이 HttpServerErrorException(500)을 던지도록 설정
-        ConfirmRequest request = new ConfirmRequest("test_key", "order_id", 5000L);
+        String uniqueOrderId = "order_" + UUID.randomUUID().toString().substring(0, 8);
+        ConfirmRequest request = new ConfirmRequest("test_key", uniqueOrderId, 5000L);
 
         // Toss 에러 응답 바디 시뮬레이션
         String errorResponseBody = "{\"code\":\"" + errorCode + "\", \"message\":\"서버 내부 에러(500)\"}";
@@ -219,15 +224,21 @@ class OrderConfirmServiceTest {
         when(restTemplate.postForEntity(anyString(), any(), eq(TossConfirmResponse.class)))
                 .thenThrow(new ResourceAccessException("Network Timeout"));
 
-        // when & then
-        // 1. 최종적으로 BusinessException이 발생하는지 확인
-        BusinessException exception = assertThrows(BusinessException.class, () -> {
+        // 2. When & Then
+        // Retry 발생 가능성을 염두에 두어 Exception으로 포착
+        Exception exception = assertThrows(Exception.class, () -> {
             orderConfirmService.sendConfirmRequest(request, null);
         });
 
-        // 2. 에러 코드가 네트워크 최종 실패인지 확인
-        assertEquals(ErrorCode.NETWORK_ERROR_FINAL_FAILED, exception.getErrorCode());
+        // Retry에 의해 감싸져 있다면 원본 BusinessException 추출
+        Throwable actualException = exception;
+        if (exception instanceof org.springframework.retry.ExhaustedRetryException) {
+            actualException = exception.getCause();
+        }
 
+        // 3. 최종 검증
+        assertTrue(actualException instanceof BusinessException, "발생한 예외는 BusinessException이어야 합니다.");
+        assertEquals("NETWORK_ERROR_FINAL_FAILED", ((BusinessException) actualException).getErrorCode().name());
         // 3. 실제로 restTemplate이 3번 호출되었는지 검증
         verify(restTemplate, times(3)).postForEntity(anyString(), any(), eq(TossConfirmResponse.class));
     }

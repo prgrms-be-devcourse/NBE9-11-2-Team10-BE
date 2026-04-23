@@ -11,12 +11,14 @@ import com.team10.backend.domain.order.dto.search.seller.SellerOrderListResponse
 import com.team10.backend.domain.order.service.OrderService;
 import com.team10.backend.domain.order.service.PaymentService;
 import com.team10.backend.global.dto.ApiResponse;
+import com.team10.backend.global.security.CustomUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -39,40 +41,41 @@ public class OrderController {
 
     @PostMapping
     @Operation(summary = "주문 등록", description = "구매자가 상품을 구매할때 주문을 생성합니다.")
-    public ApiResponse<OrderResponse> createOrder(@RequestBody @Valid OrderCreateRequest req) {
-        OrderResponse response = orderService.createOrder(req);
+    public ApiResponse<OrderResponse> createOrder(@AuthenticationPrincipal CustomUserPrincipal currentUser,
+                                                  @RequestBody @Valid OrderCreateRequest req) {
+
+        OrderResponse response = orderService.createOrder(currentUser.userId(),req);
         return ApiResponse.ok(response);
     }
 
-    @GetMapping("/buyer/{userId}")
+    @GetMapping("/buyer")
     @Operation(summary = "구매자 주문 전체 조회",description = "유저가 본인 주문내역 전체를 확인할 수 있습니다.")
-    public ApiResponse<OrderListResponse> getBuyerOrderList(@PathVariable("userId") Long userId) {
-        OrderListResponse orderListResponse = orderService.getBuyerOrderList(userId);
+    public ApiResponse<OrderListResponse> getBuyerOrderList(@AuthenticationPrincipal CustomUserPrincipal currentUser) {
+        OrderListResponse orderListResponse = orderService.getBuyerOrderList(currentUser.userId());
         return ApiResponse.ok(orderListResponse);
     }
 
-    @GetMapping("/seller/{userId}")
+    @GetMapping("/seller")
     @Operation(summary = "판매자 판매 내역 전체 조회",description = "판매자가 본인 판매내역 전체를 확인할 수 있습니다.")
-    public ApiResponse<SellerOrderListResponse> getSellerOrderList(@PathVariable("userId") Long userId) {
-        SellerOrderListResponse sellerOrderListResponse = orderService.getSellerOrderList(userId);
+    public ApiResponse<SellerOrderListResponse> getSellerOrderList(@AuthenticationPrincipal CustomUserPrincipal currentUser) {
+        SellerOrderListResponse sellerOrderListResponse = orderService.getSellerOrderList(currentUser.userId());
         return ApiResponse.ok(sellerOrderListResponse);
     }
 
-    @GetMapping("/{userId}/{orderNumber}")
+    @GetMapping("/{orderNumber}")
     @Operation(summary = "유저 주문 상세 내역 조회(판매자, 구매자)", description = "유저(판매자,구매자)가 주문 내역을 상세하게 확인할 수 있습니다.")
-    public ApiResponse<OrderDetailResponse> getBuyerOrderDetail(@PathVariable("userId") Long userId,
+    public ApiResponse<OrderDetailResponse> getBuyerOrderDetail(@AuthenticationPrincipal CustomUserPrincipal currentUser,
                                                                 @PathVariable("orderNumber") String orderNumber) {
-        OrderDetailResponse orderDetailResponse = orderService.getOrderDetail(userId, orderNumber);
+        OrderDetailResponse orderDetailResponse = orderService.getOrderDetail(currentUser.userId(), orderNumber);
         return ApiResponse.ok(orderDetailResponse);
     }
 
-    @DeleteMapping("/{userId}/{orderNumber}")
+    @DeleteMapping("/{orderNumber}")
     @Operation(summary = "주문 삭제(취소,환불)", description = "주문 번호를 통해 주문을 삭제(소프트 딜리트)합니다.")
     public ApiResponse<OrderDeleteResponse> deleteOrder(
-            @PathVariable("userId") Long userId,
+            @AuthenticationPrincipal CustomUserPrincipal currentUser,
             @PathVariable("orderNumber") String orderNumber) {
-
-        orderService.deleteOrderSoft(userId, orderNumber);
+        orderService.deleteOrderSoft(currentUser.userId(), orderNumber);
 
         return ApiResponse.ok(new OrderDeleteResponse(orderNumber, "성공적으로 삭제되었습니다."));
     }

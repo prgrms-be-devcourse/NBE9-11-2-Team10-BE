@@ -1,6 +1,7 @@
 package com.team10.backend.domain.order.service;
 
 import com.team10.backend.domain.order.dto.OrderCreateRequest;
+import com.team10.backend.domain.order.dto.cancel.CancelRequest;
 import com.team10.backend.domain.order.dto.search.OrderDetailResponse;
 import com.team10.backend.domain.order.dto.search.buyer.OrderListResponse;
 import com.team10.backend.domain.order.dto.OrderResponse;
@@ -21,6 +22,8 @@ import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.domain.user.enums.Role;
 import com.team10.backend.domain.user.repository.UserRepository;
 import com.team10.backend.global.exception.BusinessException;
+import com.team10.backend.global.exception.ErrorCode;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,11 +44,24 @@ public class OrderService {
     private final OrderProductRepository orderProductRepository;
     private final RefundService refundService;
 
-    @Transactional
-    public OrderResponse createOrder(OrderCreateRequest req) {
+    public void validateStockAvailability( OrderCreateRequest request) {
+        for (OrderCreateRequest.OrderProductReq productReq : request.orderProducts()) {
+            // DB에서 상품 정보를 하나씩 조회하여 재고 확인
+            Product product = productRepository.findById(productReq.productId())
+                    .orElseThrow(() -> new BusinessException(PRODUCT_NOT_FOUND));
 
+            if (product.getStock() < productReq.quantity()) {
+                throw new BusinessException(INSUFFICIENT_STOCK);
+            }
+        }
+    }
+
+    @Transactional
+    public OrderResponse createOrder(Long userId,OrderCreateRequest req) {
+
+        validateStockAvailability(req);
         // 1. 주문자 조회
-        User user = findUser(req.userId());
+        User user = findUser(userId);
 
         // 2. 배송 정보 엔티티 생성
         OrderDelivery delivery = deliveryInfo(req);
@@ -180,7 +196,7 @@ public class OrderService {
     public void deleteOrderSoft(Long userId, String orderNumber) {
         //주문 내역 조회
         Order order = orderRepository.findByOrderNumber(orderNumber)
-                .orElseThrow(() -> new BusinessException(ORDER_NOT_FOUND, "주문을 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ORDER_NOT_FOUND));
 
         //권한 및 배송 상태 검증
         validateOrderDelete(userId, order);
@@ -204,14 +220,14 @@ public class OrderService {
         // SHIPPING(배송중), COMPLETED(배송완료)일 경우 예외 발생
         if (order.getDelivery().getStatus() == DeliveryStatus.SHIPPING ||
                 order.getDelivery().getStatus()== DeliveryStatus.COMPLETED) {
-            throw new BusinessException(CANNOT_CANCEL_SHIPPING_ORDER, "이미 출고된 상품은 취소할 수 없습니다.");
+            throw new BusinessException(CANNOT_CANCEL_SHIPPING_ORDER);
         }
     }
 
     private void handlePaymentAndStock(Order order) {
         // 1. 결제 리스트가 비어있는지 확인 => 한 주문에서 여러번의 결제가 발생할 경우 고려
         if (order.getPayments() == null || order.getPayments().isEmpty()) {
-            throw new BusinessException(PAYMENT_NOT_FOUND, "결제 정보가 존재하지 않습니다.");
+            throw new BusinessException(PAYMENT_NOT_FOUND);
         }
 
         Payment latestPayment = order.getPayments().get(order.getPayments().size() - 1);
@@ -219,11 +235,11 @@ public class OrderService {
 
         // 1. 이미 결제된 경우 환불 로직 실행
         if (paymentStatus == PaymentStatus.PAID) {
-
+            CancelRequest cancelRequest = new CancelRequest("고객 요청에 의한 주문 취소");
             // 이 메서드 안에서 예외가 터지면 전체 트랜잭션이 롤백된다.
             // 즉, DB의 주문 삭제도 안 일어나고 재고도 안 바뀐다.
             //환불 승인이 나지 않으면 우리 DB의 is_deleted는 절대 true로 바뀌지 않고 재고도 변하지 않는다.
-            refundService.requestRefund(latestPayment.getPaymentKey(), latestPayment.getTotalAmount()); //환불 로직
+            refundService.sendCancelRequest(order.getOrderNumber(),latestPayment.getPaymentKey(), cancelRequest); //환불 로직
 
             //todo 재시도 로직은 추후에 고려
         }

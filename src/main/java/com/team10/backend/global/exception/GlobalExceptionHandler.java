@@ -209,4 +209,46 @@ public class GlobalExceptionHandler {
         }
         return ResponseEntity.internalServerError().body(problemDetail);
     }
+
+    @ExceptionHandler(org.springframework.retry.ExhaustedRetryException.class)
+    public ResponseEntity<ProblemDetail> handleRetryExhaustedException(org.springframework.retry.ExhaustedRetryException e, HttpServletRequest request) {
+        log.error("=== ExhaustedRetryException 발생 분석 ===");
+        log.error("- 1단계 Cause: {}", e.getCause() != null ? e.getCause().getClass().getName() : "null");
+
+        if (e.getCause() != null && e.getCause().getCause() != null) {
+            log.error("- 2단계 Cause: {}", e.getCause().getCause().getClass().getName());
+        }
+
+        // 원인 예외를 끝까지 추적해서 BusinessException을 찾는 로직
+        Throwable rootCause = e;
+        while (rootCause != null) {
+            if (rootCause instanceof BusinessException businessException) {
+                // 팀원이 작성한 handleBusinessException 로직과 100% 동일하게 구현
+                ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                        businessException.getStatus(),
+                        businessException.getMessage()
+                );
+                problemDetail.setTitle(businessException.getStatus().getReasonPhrase());
+
+                // 팀 표준: 에러 타입 URI 추가
+                problemDetail.setType(URI.create("https://api.example.com/errors/" + businessException.getErrorCode().getCode()));
+
+                problemDetail.setProperty("errorCode", businessException.getErrorCode().getCode());
+                problemDetail.setProperty("timestamp", LocalDateTime.now());
+                problemDetail.setProperty("instance", request.getRequestURI());
+
+                // 팀 표준: traceId 처리 추가
+                String traceId = (String) request.getAttribute("traceId");
+                if (traceId != null) {
+                    problemDetail.setProperty("traceId", traceId);
+                }
+
+                return ResponseEntity.status(businessException.getStatus()).body(problemDetail);
+            }
+            rootCause = rootCause.getCause();
+        }
+
+        log.error("비즈니스 예외를 찾지 못해 일반 에러 처리를 진행합니다.");
+        return handleUnexpectedException(e, request);
+    }
 }
