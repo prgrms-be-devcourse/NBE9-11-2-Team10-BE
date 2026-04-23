@@ -1,0 +1,92 @@
+package com.team10.backend.global.security;
+
+import com.team10.backend.global.exception.ErrorResponseUtil;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.frameoptions.XFrameOptionsHeaderWriter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import tools.jackson.databind.ObjectMapper;
+
+import java.util.List;
+
+@Configuration
+@EnableWebSecurity
+@RequiredArgsConstructor
+public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final ObjectMapper objectMapper;
+
+    @Bean
+    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .authorizeHttpRequests((authorizeHttpRequests) -> authorizeHttpRequests
+                        .requestMatchers("/favicon.ico").permitAll()
+                        .requestMatchers("/h2-console/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/members/login", "/api/v1/members/join").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/members/logout").permitAll()
+                        .requestMatchers("/api/v1/feed/me/**", "/api/v1/stores/me/products/**").hasRole("SELLER")
+                        .anyRequest().permitAll()
+                )
+                .csrf(AbstractHttpConfigurer::disable)
+                .headers((headers) -> headers
+                        .addHeaderWriter(new XFrameOptionsHeaderWriter(
+                                XFrameOptionsHeaderWriter.XFrameOptionsMode.SAMEORIGIN)))
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setContentType("application/json; charset=UTF-8");
+                            response.setStatus(401);
+                            ProblemDetail problem = ErrorResponseUtil.buildProblemDetail(
+                                    HttpStatus.UNAUTHORIZED,
+                                    "UNAUTHORIZED",
+                                    "인증 정보가 없습니다.",
+                                    request
+                            );
+                            response.getWriter().write(objectMapper.writeValueAsString(problem));
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setContentType("application/json; charset=UTF-8");
+                            response.setStatus(403);
+                            ProblemDetail problem = ErrorResponseUtil.buildProblemDetail(
+                                    HttpStatus.FORBIDDEN,
+                                    "FORBIDDEN",
+                                    "접근 권한이 없습니다.",
+                                    request
+                            );
+                            response.getWriter().write(objectMapper.writeValueAsString(problem));
+                        })
+                );
+
+        return http.build();
+    }
+
+    @Bean
+    public UrlBasedCorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration =new CorsConfiguration();
+
+        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+
+        configuration.setAllowedHeaders(List.of("*"));
+
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", configuration);
+
+        return source;
+    }
+
+}

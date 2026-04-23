@@ -1,0 +1,65 @@
+package com.team10.backend.global.security;
+
+import com.team10.backend.domain.user.enums.Role;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+
+import javax.crypto.SecretKey;
+import java.util.Date;
+import java.util.List;
+
+import static com.team10.backend.global.constant.JwtConstants.CLAIMS_ROLE;
+
+public class TokenProvider {
+
+    private final long expireTime;
+    private final SecretKey key;
+
+    public TokenProvider(String secretKey, long expireTime) {
+        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        this.key = Keys.hmacShaKeyFor(keyBytes);
+        this.expireTime = expireTime;
+    }
+
+    public String generateToken(Long id, Role role) {
+        Date issuedAt = new Date();
+        Date expiresAt = calculateExpiresAt(issuedAt);
+
+        return Jwts.builder()
+                .subject(String.valueOf(id))
+                .claim(CLAIMS_ROLE, role)
+                .issuedAt(issuedAt)
+                .expiration(expiresAt)
+                .signWith(key)
+                .compact();
+    }
+
+    private Date calculateExpiresAt(Date issuedAt) {
+        return new Date(issuedAt.getTime() + expireTime * 1000 * 60);
+    }
+
+    public Claims parseClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+
+    public Authentication getAuthentication(String token) {
+        Claims claims = parseClaims(token);
+        Long userId = Long.parseLong(claims.getSubject());
+        Role role = Role.valueOf(claims.get(CLAIMS_ROLE, String.class));
+
+        return new UsernamePasswordAuthenticationToken(
+                new CustomUserPrincipal(userId, role),
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_" + role.name()))
+        );
+    }
+}

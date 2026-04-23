@@ -6,9 +6,33 @@ spring:
     active: dev
 
   mvc:
+    static-path-pattern: /static/**
     problemdetails:
       enabled: true
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  web:
+    resources:
+      add-mappings: false
 
 springdoc:
   api-docs:
     enabled: false
+
+custom:
+  jwt:
+    secretKey: ${SECRET_KEY}
+    expireTime: 15
+  toss:
+    payment:
+      secret-key: test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6 # 공용 시크릿 키라 노출되어도 괜찮습니다.
+
+cloud:
+  aws:
+    region: ${AWS_REGION:ap-northeast-2}
+    s3:
+      bucket: ${AWS_S3_BUCKET:}
