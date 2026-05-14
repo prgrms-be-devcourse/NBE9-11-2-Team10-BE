@@ -4,6 +4,7 @@ import com.team10.backend.domain.user.enums.Role;
 import com.team10.backend.global.exception.ErrorCode;
 import com.team10.backend.global.security.CustomUserPrincipal;
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +51,17 @@ public class OrderDetailControllerTest {
         );
     }
 
+    @BeforeEach
+    void cleanUp() {
+        // 테이블 간의 외래키 제약 조건을 고려하여 자식 테이블부터 순서대로 삭제
+        jdbcTemplate.update("DELETE FROM payments");
+        jdbcTemplate.update("DELETE FROM order_products");
+        jdbcTemplate.update("DELETE FROM order_delivery");
+        jdbcTemplate.update("DELETE FROM orders");
+        jdbcTemplate.update("DELETE FROM products");
+        jdbcTemplate.update("DELETE FROM users");
+    }
+
     @Test
     @DisplayName("구매자 주문 상세 조회 성공 - 구매자 본인의 주문 조회")
     void getOrderDetail_Buyer_Success() throws Exception {
@@ -70,8 +82,13 @@ public class OrderDetailControllerTest {
         );
         jdbcTemplate.update("INSERT INTO order_products (id, order_id, product_id, quantity, order_price) VALUES (701, 501, 101, 1, 10000)");
         jdbcTemplate.update("INSERT INTO order_delivery (id, order_id, delivery_address, tracking_number) VALUES (801, 501, '서울시 강남구', 'TRK-123')");
-        jdbcTemplate.update("INSERT INTO payments (id, order_id, order_number, total_amount, status) VALUES (901, 501, ?, 10000, 'PAID')", orderNum);
-
+//        jdbcTemplate.update("INSERT INTO payments (id, order_id, order_number, total_amount, status) VALUES (901, 501, ?, 10000, 'PAID')", orderNum);
+        jdbcTemplate.update(
+                "INSERT INTO payments (id, order_id, order_number, total_amount, status, idempotency_key, type, created_at, updated_at) " +
+                        "VALUES (901, 501, ?, 10000, 'PAID', ?, 'PAYMENT', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                orderNum,
+                "unique-toss-key-902" // idempotency_key로 사용할 임의의 고유 문자열
+        );
         // When & Then
         mvc.perform(get("/api/v1/orders/{orderNumber}", orderNum).with(authentication(getAuthentication(1L, Role.BUYER))))
                 .andExpect(status().isOk())
@@ -100,8 +117,13 @@ public class OrderDetailControllerTest {
         );
         jdbcTemplate.update("INSERT INTO order_products (id, order_id, product_id, quantity, order_price) VALUES (702, 502, 201, 1, 10000)");
         jdbcTemplate.update("INSERT INTO order_delivery (id, order_id, delivery_address, tracking_number) VALUES (802, 502, '부산시 수영구', 'TRK-999')");
-        jdbcTemplate.update("INSERT INTO payments (id, order_id, order_number, total_amount, status) VALUES (902, 502, ?, 10000, 'PAID')", orderNum);
-
+//        jdbcTemplate.update("INSERT INTO payments (id, order_id, order_number, total_amount, status) VALUES (902, 502, ?, 10000, 'PAID')", orderNum);
+        jdbcTemplate.update(
+                "INSERT INTO payments (id, order_id, order_number, total_amount, status, idempotency_key, type, created_at, updated_at) " +
+                        "VALUES (902, 502, ?, 10000, 'PAID', ?, 'PAYMENT', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                orderNum,
+                "unique-toss-key-902" // idempotency_key로 사용할 임의의 고유 문자열
+        );
         // When & Then: 판매자 ID(10)로 조회 시 성공해야 함
         mvc.perform(get("/api/v1/orders/{orderNumber}", orderNum).with(authentication(getAuthentication(10L, Role.SELLER))))
                 .andExpect(status().isOk())
