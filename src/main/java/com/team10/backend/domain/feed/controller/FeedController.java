@@ -1,33 +1,18 @@
 package com.team10.backend.domain.feed.controller;
 
-import com.team10.backend.domain.feed.dto.post.CreateFeedRequestDto;
-import com.team10.backend.domain.feed.dto.post.FeedResponseDto;
-import com.team10.backend.domain.feed.dto.post.FeedLikeToggleResponseDto;
-import com.team10.backend.domain.feed.dto.post.FeedListResponseDto;
-import com.team10.backend.domain.feed.dto.post.UpdateFeedRequestDto;
-import com.team10.backend.domain.feed.dto.post.UpdateFeedResponseDto;
+import com.team10.backend.domain.feed.dto.post.*;
 import com.team10.backend.domain.feed.service.FeedPostService;
 import com.team10.backend.global.dto.ApiResponse;
 import com.team10.backend.global.security.CustomUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/stores")
-@RequiredArgsConstructor
 @Tag(name = "Feed", description = "피드 관리 API")
 public class FeedController {
 
@@ -51,7 +36,7 @@ public class FeedController {
     public ApiResponse<FeedResponseDto> createFeed(
             @RequestBody @Valid CreateFeedRequestDto requestDto,
             @AuthenticationPrincipal CustomUserPrincipal seller
-            ) {
+    ) {
         FeedResponseDto responseDto = feedPostService.createFeed(requestDto, seller.userId());
         return ApiResponse.ok(responseDto);
     }
@@ -93,4 +78,7 @@ public class FeedController {
         return ApiResponse.ok(responseDto);
     }
 
+    public FeedController(FeedPostService feedPostService) {
+        this.feedPostService = feedPostService;
+    }
 }

@@ -1,9 +1,7 @@
 package com.team10.backend.global.exception;
 
-import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
-@Getter
 public class BusinessException extends RuntimeException {
 
     private final ErrorCode errorCode;
@@ -20,5 +18,9 @@ public class BusinessException extends RuntimeException {
 
     public HttpStatus getStatus() {
         return errorCode.getStatus();
+    }
+
+    public ErrorCode getErrorCode() {
+        return this.errorCode;
     }
 }

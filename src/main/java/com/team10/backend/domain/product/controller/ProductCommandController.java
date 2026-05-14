@@ -1,31 +1,17 @@
 package com.team10.backend.domain.product.controller;
 
-import com.team10.backend.domain.product.dto.ProductCreateRequest;
-import com.team10.backend.domain.product.dto.ProductDetailResponse;
-import com.team10.backend.domain.product.dto.ProductInactiveResponse;
-import com.team10.backend.domain.product.dto.ProductStockRequest;
-import com.team10.backend.domain.product.dto.ProductStockResponse;
-import com.team10.backend.domain.product.dto.ProductUpdateRequest;
+import com.team10.backend.domain.product.dto.*;
 import com.team10.backend.domain.product.service.ProductService;
 import com.team10.backend.global.dto.ApiResponse;
 import com.team10.backend.global.security.CustomUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/api/v1/stores/me/products")
 @Tag(name = "상품 관리", description = "상품 등록/수정/삭제 API")
 public class ProductCommandController {
@@ -69,5 +55,9 @@ public class ProductCommandController {
             @RequestBody @Valid ProductStockRequest request
     ) {
         return ApiResponse.ok(productService.updateStock(principal.userId(), productId, request));
+    }
+
+    public ProductCommandController(ProductService productService) {
+        this.productService = productService;
     }
 }

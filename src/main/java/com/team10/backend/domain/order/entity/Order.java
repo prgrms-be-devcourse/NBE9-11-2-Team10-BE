@@ -5,10 +5,6 @@ import com.team10.backend.domain.order.enums.PaymentStatus;
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.global.entity.BaseEntity;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
@@ -17,8 +13,6 @@ import java.util.List;
 
 @Entity
 @Table(name = "orders")
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SQLDelete(sql = "UPDATE orders SET is_deleted = true WHERE id = ?")
 @SQLRestriction("is_deleted = false") // 삭제 시 is_deleted 필드를 true로 UPDATE, 조회 할 때, true값 필터링 수행
 public class Order extends BaseEntity {
@@ -31,7 +25,7 @@ public class Order extends BaseEntity {
     @Column(name = "order_number", nullable = false, unique = true)//유니크로 설정
     private String orderNumber;
 
-    @Column(name="total_amount")
+    @Column(name = "total_amount")
     private int totalAmount;
 
     @Enumerated(EnumType.STRING)
@@ -41,7 +35,6 @@ public class Order extends BaseEntity {
     @Column(name = "is_deleted")
     private boolean isDeleted;
 
-    @Builder
     private Order(User user, String orderNumber, int totalAmount) {
         this.user = user;
         this.orderNumber = orderNumber;
@@ -110,10 +103,82 @@ public class Order extends BaseEntity {
 
     public void cancelStatusOrder() {
         // 만약 별도의 OrderStatus 필드가 있다면 CANCEL로 변경
-         this.status = OrderStatus.CANCELED;
+        this.status = OrderStatus.CANCELED;
     }
+
     public void successStatusOrder() {
         // 만약 별도의 OrderStatus 필드가 있다면 CANCEL로 변경
         this.status = OrderStatus.SUCCESS;
+    }
+
+    public User getUser() {
+        return this.user;
+    }
+
+    public String getOrderNumber() {
+        return this.orderNumber;
+    }
+
+    public int getTotalAmount() {
+        return this.totalAmount;
+    }
+
+    public OrderStatus getStatus() {
+        return this.status;
+    }
+
+    public boolean isDeleted() {
+        return this.isDeleted;
+    }
+
+    public List<OrderProducts> getOrderProducts() {
+        return this.orderProducts;
+    }
+
+    public OrderDelivery getDelivery() {
+        return this.delivery;
+    }
+
+    public List<Payment> getPayments() {
+        return this.payments;
+    }
+
+    protected Order() {
+    }
+
+    public static class OrderBuilder {
+        private User user;
+        private String orderNumber;
+        private int totalAmount;
+
+        OrderBuilder() {
+        }
+
+        public OrderBuilder user(User user) {
+            this.user = user;
+            return this;
+        }
+
+        public OrderBuilder orderNumber(String orderNumber) {
+            this.orderNumber = orderNumber;
+            return this;
+        }
+
+        public OrderBuilder totalAmount(int totalAmount) {
+            this.totalAmount = totalAmount;
+            return this;
+        }
+
+        public Order build() {
+            return new Order(this.user, this.orderNumber, this.totalAmount);
+        }
+
+        public String toString() {
+            return "Order.OrderBuilder(user=" + this.user + ", orderNumber=" + this.orderNumber + ", totalAmount=" + this.totalAmount + ")";
+        }
+    }
+
+    public static OrderBuilder builder() {
+        return new OrderBuilder();
     }
 }

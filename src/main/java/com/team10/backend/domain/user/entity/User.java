@@ -4,24 +4,10 @@ import com.team10.backend.domain.auth.dto.AuthRegisterRequest;
 import com.team10.backend.domain.user.enums.Role;
 import com.team10.backend.domain.user.enums.UserStatus;
 import com.team10.backend.global.entity.BaseEntity;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.*;
 
 @Entity
-@Getter
 @Table(name = "users")
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class User extends BaseEntity {
 
     @Column(name = "image_url")
@@ -89,4 +75,137 @@ public class User extends BaseEntity {
         this.imageUrl = imageUrl;
     }
 
+    public String getImageUrl() {
+        return this.imageUrl;
+    }
+
+    public String getEmail() {
+        return this.email;
+    }
+
+    public String getPassword() {
+        return this.password;
+    }
+
+    public String getName() {
+        return this.name;
+    }
+
+    public String getNickname() {
+        return this.nickname;
+    }
+
+    public String getPhoneNumber() {
+        return this.phoneNumber;
+    }
+
+    public String getAddress() {
+        return this.address;
+    }
+
+    public UserStatus getUserStatus() {
+        return this.userStatus;
+    }
+
+    public Role getRole() {
+        return this.role;
+    }
+
+    public SellerInfo getSellerInfo() {
+        return this.sellerInfo;
+    }
+
+    public User(String imageUrl, String email, String password, String name, String nickname, String phoneNumber, String address, UserStatus userStatus, Role role, SellerInfo sellerInfo) {
+        this.imageUrl = imageUrl;
+        this.email = email;
+        this.password = password;
+        this.name = name;
+        this.nickname = nickname;
+        this.phoneNumber = phoneNumber;
+        this.address = address;
+        this.userStatus = userStatus;
+        this.role = role;
+        this.sellerInfo = sellerInfo;
+    }
+
+    public User() {
+    }
+
+    public static class UserBuilder {
+        private String imageUrl;
+        private String email;
+        private String password;
+        private String name;
+        private String nickname;
+        private String phoneNumber;
+        private String address;
+        private UserStatus userStatus;
+        private Role role;
+        private SellerInfo sellerInfo;
+
+        UserBuilder() {
+        }
+
+        public UserBuilder imageUrl(String imageUrl) {
+            this.imageUrl = imageUrl;
+            return this;
+        }
+
+        public UserBuilder email(String email) {
+            this.email = email;
+            return this;
+        }
+
+        public UserBuilder password(String password) {
+            this.password = password;
+            return this;
+        }
+
+        public UserBuilder name(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public UserBuilder nickname(String nickname) {
+            this.nickname = nickname;
+            return this;
+        }
+
+        public UserBuilder phoneNumber(String phoneNumber) {
+            this.phoneNumber = phoneNumber;
+            return this;
+        }
+
+        public UserBuilder address(String address) {
+            this.address = address;
+            return this;
+        }
+
+        public UserBuilder userStatus(UserStatus userStatus) {
+            this.userStatus = userStatus;
+            return this;
+        }
+
+        public UserBuilder role(Role role) {
+            this.role = role;
+            return this;
+        }
+
+        public UserBuilder sellerInfo(SellerInfo sellerInfo) {
+            this.sellerInfo = sellerInfo;
+            return this;
+        }
+
+        public User build() {
+            return new User(this.imageUrl, this.email, this.password, this.name, this.nickname, this.phoneNumber, this.address, this.userStatus, this.role, this.sellerInfo);
+        }
+
+        public String toString() {
+            return "User.UserBuilder(imageUrl=" + this.imageUrl + ", email=" + this.email + ", password=" + this.password + ", name=" + this.name + ", nickname=" + this.nickname + ", phoneNumber=" + this.phoneNumber + ", address=" + this.address + ", userStatus=" + this.userStatus + ", role=" + this.role + ", sellerInfo=" + this.sellerInfo + ")";
+        }
+    }
+
+    public static UserBuilder builder() {
+        return new UserBuilder();
+    }
 }

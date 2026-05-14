@@ -1,10 +1,10 @@
 package com.team10.backend.domain.order.service;
 
 import com.team10.backend.domain.order.dto.OrderCreateRequest;
+import com.team10.backend.domain.order.dto.OrderResponse;
 import com.team10.backend.domain.order.dto.cancel.CancelRequest;
 import com.team10.backend.domain.order.dto.search.OrderDetailResponse;
 import com.team10.backend.domain.order.dto.search.buyer.OrderListResponse;
-import com.team10.backend.domain.order.dto.OrderResponse;
 import com.team10.backend.domain.order.dto.search.buyer.OrderSummaryResponse;
 import com.team10.backend.domain.order.dto.search.seller.SellerOrderListResponse;
 import com.team10.backend.domain.order.dto.search.seller.SellerOrderSummaryResponse;
@@ -22,7 +22,6 @@ import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.domain.user.enums.Role;
 import com.team10.backend.domain.user.repository.UserRepository;
 import com.team10.backend.global.exception.BusinessException;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +32,6 @@ import java.util.UUID;
 import static com.team10.backend.global.exception.ErrorCode.*;
 
 @Service
-@RequiredArgsConstructor
 public class OrderService {
 
     private final OrderRepository orderRepository;
@@ -42,7 +40,7 @@ public class OrderService {
     private final OrderProductRepository orderProductRepository;
 //    private final RefundService refundService;
 
-    public void validateStockAvailability( OrderCreateRequest request) {
+    public void validateStockAvailability(OrderCreateRequest request) {
         for (OrderCreateRequest.OrderProductReq productReq : request.orderProducts()) {
             // DB에서 상품 정보를 하나씩 조회하여 재고 확인
             Product product = productRepository.findById(productReq.productId())
@@ -55,7 +53,7 @@ public class OrderService {
     }
 
     @Transactional
-    public OrderResponse createOrder(Long userId,OrderCreateRequest req) {
+    public OrderResponse createOrder(Long userId, OrderCreateRequest req) {
 
         validateStockAvailability(req);
         // 1. 주문자 조회
@@ -88,12 +86,12 @@ public class OrderService {
     //유저 찾기
     public User findUser(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() ->new BusinessException(USER_NOT_FOUND,"해당 유저 정보를 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(USER_NOT_FOUND, "해당 유저 정보를 찾을 수 없습니다."));
     }
 
     //order-delivery 테이블에 배송지, 운송장 번호 생성
     public OrderDelivery deliveryInfo(OrderCreateRequest request) {
-        return  OrderDelivery.builder()
+        return OrderDelivery.builder()
                 .delivery_address(request.deliveryAddress())
                 .tracking_number(null) // 송장 번호를 여기서 만들어야 하나?
                 .build();
@@ -102,9 +100,9 @@ public class OrderService {
     //order-product테이블에 상품id, 상품 수량, 상품 가격을 넣는다.
     public List<OrderProducts> getOrderProductList(OrderCreateRequest request) {
         return request.orderProducts().stream()
-                .map(orderProdctReq->{
+                .map(orderProdctReq -> {
                     Product product = productRepository.findByIdWithPessimisticLock(orderProdctReq.productId())
-                            .orElseThrow(() -> new BusinessException(PRODUCT_NOT_FOUND,"상품을 찾을 수 없습니다. ID: " + orderProdctReq.productId()));
+                            .orElseThrow(() -> new BusinessException(PRODUCT_NOT_FOUND, "상품을 찾을 수 없습니다. ID: " + orderProdctReq.productId()));
 
                     //todo 재고 감소 로직
                     product.decreaseStock(orderProdctReq.quantity());
@@ -176,7 +174,7 @@ public class OrderService {
             if (!order.getUser().getId().equals(curUserId)) {
                 throw new BusinessException(ACCESS_DENIED);
             }
-        }else if (user.getRole()  == Role.SELLER) {
+        } else if (user.getRole() == Role.SELLER) {
             // 판매자라면: order_product 테이블에서 해당 주문 안에 '내 상품'이 하나라도 포함되어 있는지 확인한다.
             boolean isSellerOfThisOrder = order.getOrderProducts().stream()
                     .anyMatch(op -> op.getProduct().getUser().getId().equals(curUserId));
@@ -217,7 +215,7 @@ public class OrderService {
         }
         // SHIPPING(배송중), COMPLETED(배송완료)일 경우 예외 발생
         if (order.getDelivery().getStatus() == DeliveryStatus.SHIPPING ||
-                order.getDelivery().getStatus()== DeliveryStatus.COMPLETED) {
+                order.getDelivery().getStatus() == DeliveryStatus.COMPLETED) {
             throw new BusinessException(CANNOT_CANCEL_SHIPPING_ORDER);
         }
     }
@@ -258,5 +256,12 @@ public class OrderService {
 //                orderProduct.getProduct().addStock(orderProduct.getQuantity());
             });
         }
+    }
+
+    public OrderService(OrderRepository orderRepository, UserRepository userRepository, ProductRepository productRepository, OrderProductRepository orderProductRepository) {
+        this.orderRepository = orderRepository;
+        this.userRepository = userRepository;
+        this.productRepository = productRepository;
+        this.orderProductRepository = orderProductRepository;
     }
 }

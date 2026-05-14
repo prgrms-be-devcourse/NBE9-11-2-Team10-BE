@@ -4,16 +4,10 @@ import com.team10.backend.domain.order.enums.PaymentStatus;
 import com.team10.backend.domain.order.enums.RequestType;
 import com.team10.backend.global.entity.BaseEntity;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 
 @Entity
-@Getter
 @Table(name = "payments")
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Payment extends BaseEntity {
     //orderNumber하고 멱등키를 2개로 하는 unique제약이 필요.
     //FAILED일때는 괜찮은데 같은 number와 멱등키를 사용해야 하는 uncertain의 경우는 어떡하지?
@@ -45,7 +39,6 @@ public class Payment extends BaseEntity {
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
-    @Builder
     private Payment(Order order, String orderNumber, int totalAmount, PaymentStatus status,
                     String idempotencyKey, RequestType type) {
         this.order = order;
@@ -88,12 +81,103 @@ public class Payment extends BaseEntity {
     }
 
     public void markAsUncertain() {
-        this.status= PaymentStatus.UNCERTAIN;
+        this.status = PaymentStatus.UNCERTAIN;
     }
 
-    public String getLastTossKey(){return this.idempotencyKey;}
+    public String getLastTossKey() {
+        return this.idempotencyKey;
+    }
 
     public void setOrder(Order order) {
         this.order = order;
+    }
+
+    public String getOrderNumber() {
+        return this.orderNumber;
+    }
+
+    public int getTotalAmount() {
+        return this.totalAmount;
+    }
+
+    public PaymentStatus getStatus() {
+        return this.status;
+    }
+
+    public String getPaymentKey() {
+        return this.paymentKey;
+    }
+
+    public String getIdempotencyKey() {
+        return this.idempotencyKey;
+    }
+
+    public RequestType getType() {
+        return this.type;
+    }
+
+    public String getResponseBody() {
+        return this.responseBody;
+    }
+
+    public Order getOrder() {
+        return this.order;
+    }
+
+    protected Payment() {
+    }
+
+    public static class PaymentBuilder {
+        private Order order;
+        private String orderNumber;
+        private int totalAmount;
+        private PaymentStatus status;
+        private String idempotencyKey;
+        private RequestType type;
+
+        PaymentBuilder() {
+        }
+
+        public PaymentBuilder order(Order order) {
+            this.order = order;
+            return this;
+        }
+
+        public PaymentBuilder orderNumber(String orderNumber) {
+            this.orderNumber = orderNumber;
+            return this;
+        }
+
+        public PaymentBuilder totalAmount(int totalAmount) {
+            this.totalAmount = totalAmount;
+            return this;
+        }
+
+        public PaymentBuilder status(PaymentStatus status) {
+            this.status = status;
+            return this;
+        }
+
+        public PaymentBuilder idempotencyKey(String idempotencyKey) {
+            this.idempotencyKey = idempotencyKey;
+            return this;
+        }
+
+        public PaymentBuilder type(RequestType type) {
+            this.type = type;
+            return this;
+        }
+
+        public Payment build() {
+            return new Payment(this.order, this.orderNumber, this.totalAmount, this.status, this.idempotencyKey, this.type);
+        }
+
+        public String toString() {
+            return "Payment.PaymentBuilder(order=" + this.order + ", orderNumber=" + this.orderNumber + ", totalAmount=" + this.totalAmount + ", status=" + this.status + ", idempotencyKey=" + this.idempotencyKey + ", type=" + this.type + ")";
+        }
+    }
+
+    public static PaymentBuilder builder() {
+        return new PaymentBuilder();
     }
 }

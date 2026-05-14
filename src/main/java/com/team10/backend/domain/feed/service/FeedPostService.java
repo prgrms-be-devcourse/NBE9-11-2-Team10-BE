@@ -1,12 +1,6 @@
 package com.team10.backend.domain.feed.service;
 
-import com.team10.backend.domain.feed.dto.post.CreateFeedRequestDto;
-import com.team10.backend.domain.feed.dto.post.FeedResponseDto;
-import com.team10.backend.domain.feed.dto.post.FeedDto;
-import com.team10.backend.domain.feed.dto.post.FeedLikeToggleResponseDto;
-import com.team10.backend.domain.feed.dto.post.FeedListResponseDto;
-import com.team10.backend.domain.feed.dto.post.UpdateFeedRequestDto;
-import com.team10.backend.domain.feed.dto.post.UpdateFeedResponseDto;
+import com.team10.backend.domain.feed.dto.post.*;
 import com.team10.backend.domain.feed.entity.FeedLike;
 import com.team10.backend.domain.feed.entity.FeedPost;
 import com.team10.backend.domain.feed.repository.FeedLikeRepository;
@@ -17,7 +11,6 @@ import com.team10.backend.domain.user.enums.Role;
 import com.team10.backend.domain.user.repository.UserRepository;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +19,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class FeedPostService {
 
@@ -190,5 +182,12 @@ public class FeedPostService {
         feedLikeRepository.save(new FeedLike(feedPost, currentUser));
         feedPost.increaseLikeCount();
         return true;
+    }
+
+    public FeedPostService(FeedPostRepository feedPostRepository, FeedLikeRepository feedLikeRepository, UserRepository userRepository, ImageUploadService imageUploadService) {
+        this.feedPostRepository = feedPostRepository;
+        this.feedLikeRepository = feedLikeRepository;
+        this.userRepository = userRepository;
+        this.imageUploadService = imageUploadService;
     }
 }

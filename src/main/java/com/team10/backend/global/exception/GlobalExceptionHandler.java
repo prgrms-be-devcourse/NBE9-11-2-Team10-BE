@@ -2,7 +2,7 @@ package com.team10.backend.global.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+//import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -25,7 +25,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Slf4j
+//@Slf4j
 @RestControllerAdvice
 @RequiredArgsConstructor
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -212,11 +212,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(org.springframework.retry.ExhaustedRetryException.class)
     public ResponseEntity<ProblemDetail> handleRetryExhaustedException(org.springframework.retry.ExhaustedRetryException e, HttpServletRequest request) {
-        log.error("=== ExhaustedRetryException 발생 분석 ===");
-        log.error("- 1단계 Cause: {}", e.getCause() != null ? e.getCause().getClass().getName() : "null");
+//        log.error("=== ExhaustedRetryException 발생 분석 ===");
+//        log.error("- 1단계 Cause: {}", e.getCause() != null ? e.getCause().getClass().getName() : "null");
 
         if (e.getCause() != null && e.getCause().getCause() != null) {
-            log.error("- 2단계 Cause: {}", e.getCause().getCause().getClass().getName());
+//            log.error("- 2단계 Cause: {}", e.getCause().getCause().getClass().getName());
         }
 
         // 원인 예외를 끝까지 추적해서 BusinessException을 찾는 로직
@@ -248,7 +248,7 @@ public class GlobalExceptionHandler {
             rootCause = rootCause.getCause();
         }
 
-        log.error("비즈니스 예외를 찾지 못해 일반 에러 처리를 진행합니다.");
+//        log.error("비즈니스 예외를 찾지 못해 일반 에러 처리를 진행합니다.");
         return handleUnexpectedException(e, request);
     }
 }

@@ -1,11 +1,6 @@
 package com.team10.backend.domain.feed.service;
 
-import com.team10.backend.domain.feed.dto.comment.CommentLikeToggleResponseDto;
-import com.team10.backend.domain.feed.dto.comment.CommentListResponseDto;
-import com.team10.backend.domain.feed.dto.comment.CommentResponseDto;
-import com.team10.backend.domain.feed.dto.comment.CreateCommentRequestDto;
-import com.team10.backend.domain.feed.dto.comment.PaginationResponseDto;
-import com.team10.backend.domain.feed.dto.comment.UpdateCommentRequestDto;
+import com.team10.backend.domain.feed.dto.comment.*;
 import com.team10.backend.domain.feed.entity.FeedComment;
 import com.team10.backend.domain.feed.entity.FeedCommentLike;
 import com.team10.backend.domain.feed.entity.FeedPost;
@@ -16,7 +11,6 @@ import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.domain.user.repository.UserRepository;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class FeedCommentService {
 
@@ -74,7 +67,6 @@ public class FeedCommentService {
 
         return new CommentListResponseDto(comments, toPaginationDto(commentPage));
     }
-
 
 
     @Transactional
@@ -225,5 +217,12 @@ public class FeedCommentService {
         feedCommentLikeRepository.save(new FeedCommentLike(feedComment, currentUser));
         feedComment.increaseLikeCount();
         return true;
+    }
+
+    public FeedCommentService(FeedPostRepository feedPostRepository, FeedCommentRepository feedCommentRepository, FeedCommentLikeRepository feedCommentLikeRepository, UserRepository userRepository) {
+        this.feedPostRepository = feedPostRepository;
+        this.feedCommentRepository = feedCommentRepository;
+        this.feedCommentLikeRepository = feedCommentLikeRepository;
+        this.userRepository = userRepository;
     }
 }

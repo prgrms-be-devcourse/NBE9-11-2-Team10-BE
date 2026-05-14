@@ -9,8 +9,6 @@ import com.team10.backend.domain.order.enums.RequestType;
 import com.team10.backend.domain.order.repository.OrderRepository;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.retry.annotation.Backoff;
@@ -29,9 +27,10 @@ import java.util.UUID;
 
 import static com.team10.backend.global.exception.ErrorCode.*;
 
+//import lombok.extern.slf4j.Slf4j;
+
 @Service
-@RequiredArgsConstructor
-@Slf4j
+//@Slf4j
 public class OrderConfirmService {
 
     @Value("${custom.toss.payment.secret-key}")
@@ -46,12 +45,12 @@ public class OrderConfirmService {
 
     // 1. 재시도 로직
     @Retryable(
-            value = { ResourceAccessException.class},
-            exclude = { BusinessException.class },
+            value = {ResourceAccessException.class},
+            exclude = {BusinessException.class},
             maxAttempts = 3,
             backoff = @Backoff(delay = 1000, multiplier = 2)
     )
-    public TossConfirmResponse sendConfirmRequest(ConfirmRequest request,String testCode) {
+    public TossConfirmResponse sendConfirmRequest(ConfirmRequest request, String testCode) {
         HttpHeaders headers = new HttpHeaders();
 
         if (testCode != null) {
@@ -65,7 +64,7 @@ public class OrderConfirmService {
                 .orElseThrow(() -> new BusinessException(ORDER_NOT_FOUND));
 
         //수정
-        Payment currentPayment = paymentStatusService.getOrCreatePaymentAttempt(order, RequestType.PAYMENT,null);
+        Payment currentPayment = paymentStatusService.getOrCreatePaymentAttempt(order, RequestType.PAYMENT, null);
 
         // 2. 이미 성공한 요청이면 저장된 응답 반환
         if (currentPayment.getStatus() == PaymentStatus.PAID) {
@@ -79,7 +78,7 @@ public class OrderConfirmService {
 //        );
 
         String tossIdempotencyKey = currentPayment.getIdempotencyKey();
-        headers.set("Idempotency-Key", tossIdempotencyKey+ (testCode != null ? UUID.randomUUID() : ""));
+        headers.set("Idempotency-Key", tossIdempotencyKey + (testCode != null ? UUID.randomUUID() : ""));
         headers.set("Authorization", "Basic " + encodedKey);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
@@ -87,7 +86,7 @@ public class OrderConfirmService {
 
         try {
             ResponseEntity<TossConfirmResponse> response = restTemplate.postForEntity(TOSS_URL + "/confirm", entity, TossConfirmResponse.class);
-            log.info("응답값 확인 {},{}",response,response.getBody());
+//            log.info("응답값 확인 {},{}",response,response.getBody());
             // 성공 시 내 DB 업데이트
             paymentStatusService.finalizeRecord(currentPayment, PaymentStatus.PAID, response.getBody());
             return response.getBody();
@@ -95,7 +94,7 @@ public class OrderConfirmService {
             // 비즈니스 로직 에러 (4xx)
             // 사용자의 잔액 부족, 카드 정보 오류 등
             String errorBody = e.getResponseBodyAsString();
-            log.info("에러 바디 확인: {}", errorBody); // 추가
+//            log.info("에러 바디 확인: {}", errorBody); // 추가
             //null을 전달하여 상태만 FAILED로 변경
             paymentStatusService.finalizeRecord(currentPayment, PaymentStatus.FAILED, null);
             handleBusinessError(e.getStatusCode(), errorBody);
@@ -105,7 +104,7 @@ public class OrderConfirmService {
             // 시스템 및 서버 에러 (5xx)
             // 토스 서버 장애, 은행 점검 등
             String errorBody = e.getResponseBodyAsString();
-            log.error("토스 시스템 에러 (5xx): {}",errorBody);
+//            log.error("토스 시스템 에러 (5xx): {}",errorBody);
             //토스 서버 문제이므로 FAILED 처리하여 나중에 다시 시도 가능하게 함
             paymentStatusService.finalizeRecord(currentPayment, PaymentStatus.FAILED, null);
             handleSystemError(e.getStatusCode(), errorBody);
@@ -116,7 +115,7 @@ public class OrderConfirmService {
             //1. 재시도 로직
             //2. WEBhook을 사용
             //finalizeRecord를 호출하지 않음으로써 DB의 PENDING 상태를 그대로 유지
-            log.error("네트워크 통신 실패: {}", e.getMessage());
+//            log.error("네트워크 통신 실패: {}", e.getMessage());
             paymentStatusService.markRecordAsUncertain(currentPayment);
             throw e;
         }
@@ -125,8 +124,8 @@ public class OrderConfirmService {
 
     // 최종적으로 사용자에게 실패 응답을 던지거나,
     @Recover
-    public TossConfirmResponse recover(ResourceAccessException e, ConfirmRequest request,String testCode) {
-        log.error("결제 승인 최종 실패 - 모든 재시도 소진. 주문번호: {}, 에러: {}",
+    public TossConfirmResponse recover(ResourceAccessException e, ConfirmRequest request, String testCode) {
+        System.err.printf("[ERROR] 결제 승인 최종 실패 - 주문번호: %s, 에러: %s%n",
                 request.orderId(), e.getMessage());
         //todo 관리자에게 알람
         // 네트워크 장애 시: "결제 확인 중" 상태로 변경하거나 관리자 알림
@@ -136,13 +135,13 @@ public class OrderConfirmService {
     private void handleBusinessError(HttpStatusCode status, String errorBody) {
         String errorCode = parseErrorCode(errorBody);
 
-        log.error("토스페이먼츠 4xx 에러 발생 - Status: {}, Code: {}", status, errorCode);
+//        log.error("토스페이먼츠 4xx 에러 발생 - Status: {}, Code: {}", status, errorCode);
 
         //404
         if (status.equals(HttpStatus.NOT_FOUND)) {
             switch (errorCode) {
-                case "NOT_FOUND_PAYMENT" :
-                    throw new BusinessException(NOT_FOUND_PAYMENT );
+                case "NOT_FOUND_PAYMENT":
+                    throw new BusinessException(NOT_FOUND_PAYMENT);
                 case "NOT_FOUND_PAYMENT_SESSION":
                     throw new BusinessException(NOT_FOUND_PAYMENT_SESSION);
             }
@@ -151,7 +150,7 @@ public class OrderConfirmService {
         // 403Forbidden: 권한이나 상태에 따른 거절
         if (status.equals(HttpStatus.FORBIDDEN)) {
             switch (errorCode) {
-                case "REJECT_ACCOUNT_PAYMENT" :
+                case "REJECT_ACCOUNT_PAYMENT":
                     throw new BusinessException(REJECT_ACCOUNT_PAYMENT);
                 case "REJECT_CARD_PAYMENT":
                     throw new BusinessException(REJECT_CARD_PAYMENT);
@@ -167,22 +166,22 @@ public class OrderConfirmService {
         // 400 Bad Request:
         if (status.equals(HttpStatus.BAD_REQUEST)) {
             switch (errorCode) {
-                case "ALREADY_PROCESSED_PAYMENT" :
+                case "ALREADY_PROCESSED_PAYMENT":
                     throw new BusinessException(ALREADY_PROCESSED_PAYMENT);
                 case "INVALID_REQUEST":
                     throw new BusinessException(INVALID_REQUEST);
                 case "INVALID_API_KEY":
                     throw new BusinessException(INVALID_API_KEY);
                 case "INVALID_REJECT_CARD":
-                    throw new BusinessException(INVALID_REJECT_CARD );
+                    throw new BusinessException(INVALID_REJECT_CARD);
                 case "INVALID_CARD_EXPIRATION":
-                    throw new BusinessException(INVALID_CARD_EXPIRATION );
+                    throw new BusinessException(INVALID_CARD_EXPIRATION);
                 case "INVALID_STOPPED_CARD":
-                    throw new BusinessException(INVALID_STOPPED_CARD );
+                    throw new BusinessException(INVALID_STOPPED_CARD);
                 case "INVALID_CARD_LOST_OR_STOLEN":
-                    throw new BusinessException(INVALID_CARD_LOST_OR_STOLEN );
+                    throw new BusinessException(INVALID_CARD_LOST_OR_STOLEN);
                 case "INVALID_CARD_NUMBER":
-                    throw new BusinessException(INVALID_CARD_NUMBER );
+                    throw new BusinessException(INVALID_CARD_NUMBER);
                 case "INVALID_ACCOUNT_INFO_RE_REGISTER":
                     throw new BusinessException(INVALID_ACCOUNT_INFO_RE_REGISTER);
                 case "UNAPPROVED_ORDER_ID":
@@ -196,7 +195,7 @@ public class OrderConfirmService {
         // JSON 파싱을 통해 토스의 code와 message 추출
         String errorCode = parseErrorCode(errorBody);
 
-        log.error("토스페이먼츠 5xx 에러 발생 - Status: {}, Code: {}", status, errorCode);
+//        log.error("토스페이먼츠 5xx 에러 발생 - Status: {}, Code: {}", status, errorCode);
         //todo 관리자나 개발자에게 알람이 가는 로직
 
         // 3. 토스 서버 및 은행 점검 문제 (500 계열)
@@ -208,7 +207,7 @@ public class OrderConfirmService {
                 case "UNKNOWN_PAYMENT_ERROR":
                     throw new BusinessException(UNKNOWN_PAYMENT_ERROR);
                 case "FAILED_INTERNAL_SYSTEM_PROCESSING":
-                    throw new BusinessException(FAILED_INTERNAL_SYSTEM_PROCESSING );
+                    throw new BusinessException(FAILED_INTERNAL_SYSTEM_PROCESSING);
             }
         }
     }
@@ -222,8 +221,15 @@ public class OrderConfirmService {
             return root.path("code").asText();
         } catch (Exception e) {
             // 파싱 실패 시 로깅 후 기본 에러 코드 반환
-            log.error("토스 에러 응답 파싱 중 오류 발생: {}", e.getMessage());
+//            log.error("토스 에러 응답 파싱 중 오류 발생: {}", e.getMessage());
             return "UNKNOWN_ERROR";
         }
+    }
+
+    public OrderConfirmService(ObjectMapper objectMapper, RestTemplate restTemplate, PaymentStatusService paymentStatusService, OrderRepository orderRepository) {
+        this.objectMapper = objectMapper;
+        this.restTemplate = restTemplate;
+        this.paymentStatusService = paymentStatusService;
+        this.orderRepository = orderRepository;
     }
 }

@@ -2,23 +2,12 @@ package com.team10.backend.domain.feed.entity;
 
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.global.entity.BaseEntity;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "feed_posts")
 public class FeedPost extends BaseEntity {
 
@@ -71,5 +60,36 @@ public class FeedPost extends BaseEntity {
         if (this.commentCount > 0) {
             this.commentCount--;
         }
+    }
+
+    public String getImageUrl() {
+        return this.imageUrl;
+    }
+
+    public String getContent() {
+        return this.content;
+    }
+
+    public User getUser() {
+        return this.user;
+    }
+
+    public List<FeedLike> getFeedLikes() {
+        return this.feedLikes;
+    }
+
+    public List<FeedComment> getComments() {
+        return this.comments;
+    }
+
+    public int getLikeCount() {
+        return this.likeCount;
+    }
+
+    public int getCommentCount() {
+        return this.commentCount;
+    }
+
+    protected FeedPost() {
     }
 }

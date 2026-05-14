@@ -1,35 +1,20 @@
 package com.team10.backend.domain.feed.controller;
 
-import com.team10.backend.domain.feed.dto.comment.CommentLikeToggleResponseDto;
-import com.team10.backend.domain.feed.dto.comment.CommentListResponseDto;
-import com.team10.backend.domain.feed.dto.comment.CommentResponseDto;
-import com.team10.backend.domain.feed.dto.comment.CreateCommentRequestDto;
-import com.team10.backend.domain.feed.dto.comment.UpdateCommentRequestDto;
+import com.team10.backend.domain.feed.dto.comment.*;
 import com.team10.backend.domain.feed.service.FeedCommentService;
 import com.team10.backend.global.dto.ApiResponse;
 import com.team10.backend.global.security.CustomUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/stores/{sellerId}/feeds/{feedId}/comments")
-@RequiredArgsConstructor
 @Tag(name = "Feed_Comment", description = "피드 댓글 관리 API")
 public class FeedCommentController {
 
@@ -70,7 +55,7 @@ public class FeedCommentController {
             @PathVariable Long commentId,
             @RequestBody @Valid UpdateCommentRequestDto requestDto,
             @AuthenticationPrincipal CustomUserPrincipal currentUser
-            ){
+    ) {
         return ApiResponse.ok(feedCommentService.updateComment(sellerId, feedId, commentId, requestDto, currentUser.userId()));
     }
 
@@ -110,4 +95,7 @@ public class FeedCommentController {
         return currentUserId(authentication);
     }
 
+    public FeedCommentController(FeedCommentService feedCommentService) {
+        this.feedCommentService = feedCommentService;
+    }
 }

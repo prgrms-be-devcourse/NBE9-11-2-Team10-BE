@@ -8,9 +8,6 @@ import com.team10.backend.domain.order.enums.PaymentStatus;
 import com.team10.backend.domain.order.enums.RequestType;
 import com.team10.backend.domain.order.repository.PaymentRepository;
 import com.team10.backend.global.exception.BusinessException;
-import com.team10.backend.global.exception.ErrorCode;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -24,11 +21,12 @@ import static com.team10.backend.domain.order.enums.PaymentStatus.PAID;
 import static com.team10.backend.global.exception.ErrorCode.ALREADY_PROCESSED_PAYMENT;
 import static com.team10.backend.global.exception.ErrorCode.PAYMENT_NOT_FOUND;
 
+//import lombok.extern.slf4j.Slf4j;
+
 @Service
-@RequiredArgsConstructor
-@Slf4j
+//@Slf4j
 public class PaymentStatusService {
-     private final PaymentRepository paymentRepository;
+    private final PaymentRepository paymentRepository;
     private final ObjectMapper objectMapper;
 
     //      네트워크 에러 발생 시 호출:
@@ -60,11 +58,11 @@ public class PaymentStatusService {
             }
 
             // 2. 신규 생성 (FAILED 이후 혹은 최초 생성)
-            return createNewPaymentAttempt(order,type);
+            return createNewPaymentAttempt(order, type);
 
         } catch (DataIntegrityViolationException e) {
             // 동시성 이슈: 거의 동시에 두 스레드가 신규 생성(v1 등)을 시도했을 경우
-            log.warn("결제 레코드 생성 중 경합 발생 - 최신 데이터 재조회");
+//            log.warn("결제 레코드 생성 중 경합 발생 - 최신 데이터 재조회");
             Payment latest = paymentRepository.findFirstByOrderOrderByCreatedAtDesc(order)
                     .orElseThrow(() -> e); // 여전히 없다면 원본 에러 던짐
 
@@ -72,6 +70,7 @@ public class PaymentStatusService {
             throw new BusinessException(ALREADY_PROCESSED_PAYMENT);
         }
     }
+
     private Payment createNewPaymentAttempt(Order order, RequestType type) {
         // v1, v2... 접미사 생성을 위한 count
 //        int attemptCount = paymentRepository2.countByOrder(order);
@@ -94,7 +93,8 @@ public class PaymentStatusService {
     // 상태 분기 로직 공통화
     private Payment handleExistingPayment(Payment curPayment) {
         switch (curPayment.getStatus()) {
-            case PAID: return curPayment;
+            case PAID:
+                return curPayment;
             case UNCERTAIN:
                 // 네트워크 에러 등으로 상태가 불분명했던 경우:
                 // 토스 가이드에 따라 '동일한 Idempotency-Key'를 유지하며 재시도
@@ -106,7 +106,8 @@ public class PaymentStatusService {
             case FAILED:
                 // null 반환 시 상위 메서드에서 createNewPaymentAttempt() 호출
                 return null;//return curPayment;
-            default: throw new BusinessException(ALREADY_PROCESSED_PAYMENT);
+            default:
+                throw new BusinessException(ALREADY_PROCESSED_PAYMENT);
         }
     }
 //    private boolean isExpired(IdempotencyRecord record) {
@@ -127,7 +128,7 @@ public class PaymentStatusService {
 
         // 2. 이미 PAID인 경우 (웹훅이 먼저 처리한 경우) 바로 리턴
         if (payment.getStatus() == PaymentStatus.PAID) {
-            log.info("이미 완료된 결제입니다. (Race Condition 방어)");
+//            log.info("이미 완료된 결제입니다. (Race Condition 방어)");
             return;
         }
 
@@ -162,4 +163,8 @@ public class PaymentStatusService {
         return objectMapper.writeValueAsString(response);
     }
 
+    public PaymentStatusService(PaymentRepository paymentRepository, ObjectMapper objectMapper) {
+        this.paymentRepository = paymentRepository;
+        this.objectMapper = objectMapper;
+    }
 }

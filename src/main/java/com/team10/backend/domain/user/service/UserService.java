@@ -1,18 +1,12 @@
 package com.team10.backend.domain.user.service;
 
 import com.team10.backend.domain.image.service.ImageUploadService;
-import com.team10.backend.domain.user.dto.ProfileImageUpdateRequest;
-import com.team10.backend.domain.user.dto.SellerPublicResponse;
-import com.team10.backend.domain.user.dto.SellerResponse;
-import com.team10.backend.domain.user.dto.SellerUpdateRequest;
-import com.team10.backend.domain.user.dto.UserResponse;
-import com.team10.backend.domain.user.dto.UserUpdateRequest;
+import com.team10.backend.domain.user.dto.*;
 import com.team10.backend.domain.user.entity.SellerInfo;
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.domain.user.enums.Role;
 import com.team10.backend.domain.user.repository.UserRepository;
 import com.team10.backend.global.exception.BusinessException;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +16,6 @@ import static com.team10.backend.global.exception.ErrorCode.NOT_SELLER;
 import static com.team10.backend.global.exception.ErrorCode.USER_NOT_FOUND;
 
 @Service
-@RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
@@ -114,8 +107,13 @@ public class UserService {
     }
 
     private void validateSellerRole(User user) {
-        if(user.getRole() != Role.SELLER) {
+        if (user.getRole() != Role.SELLER) {
             throw new BusinessException(NOT_SELLER);
         }
+    }
+
+    public UserService(UserRepository userRepository, ImageUploadService imageUploadService) {
+        this.userRepository = userRepository;
+        this.imageUploadService = imageUploadService;
     }
 }

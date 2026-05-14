@@ -2,11 +2,11 @@ package com.team10.backend.domain.order.controller;
 
 import com.team10.backend.domain.order.dto.OrderCreateRequest;
 import com.team10.backend.domain.order.dto.OrderDeleteResponse;
+import com.team10.backend.domain.order.dto.OrderResponse;
 import com.team10.backend.domain.order.dto.confirm.ConfirmRequest;
 import com.team10.backend.domain.order.dto.confirm.TossConfirmResponse;
 import com.team10.backend.domain.order.dto.search.OrderDetailResponse;
 import com.team10.backend.domain.order.dto.search.buyer.OrderListResponse;
-import com.team10.backend.domain.order.dto.OrderResponse;
 import com.team10.backend.domain.order.dto.search.seller.SellerOrderListResponse;
 import com.team10.backend.domain.order.service.OrderService;
 import com.team10.backend.domain.order.service.PaymentService;
@@ -15,17 +15,11 @@ import com.team10.backend.global.security.CustomUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.security.Principal;
-
 @RestController
 @RequestMapping("/api/v1/orders")
-@RequiredArgsConstructor
 @Tag(name = "주문", description = "주문 관련 API")
 public class OrderController {
 
@@ -44,19 +38,19 @@ public class OrderController {
     public ApiResponse<OrderResponse> createOrder(@AuthenticationPrincipal CustomUserPrincipal currentUser,
                                                   @RequestBody @Valid OrderCreateRequest req) {
 
-        OrderResponse response = orderService.createOrder(currentUser.userId(),req);
+        OrderResponse response = orderService.createOrder(currentUser.userId(), req);
         return ApiResponse.ok(response);
     }
 
     @GetMapping("/buyer")
-    @Operation(summary = "구매자 주문 전체 조회",description = "유저가 본인 주문내역 전체를 확인할 수 있습니다.")
+    @Operation(summary = "구매자 주문 전체 조회", description = "유저가 본인 주문내역 전체를 확인할 수 있습니다.")
     public ApiResponse<OrderListResponse> getBuyerOrderList(@AuthenticationPrincipal CustomUserPrincipal currentUser) {
         OrderListResponse orderListResponse = orderService.getBuyerOrderList(currentUser.userId());
         return ApiResponse.ok(orderListResponse);
     }
 
     @GetMapping("/seller")
-    @Operation(summary = "판매자 판매 내역 전체 조회",description = "판매자가 본인 판매내역 전체를 확인할 수 있습니다.")
+    @Operation(summary = "판매자 판매 내역 전체 조회", description = "판매자가 본인 판매내역 전체를 확인할 수 있습니다.")
     public ApiResponse<SellerOrderListResponse> getSellerOrderList(@AuthenticationPrincipal CustomUserPrincipal currentUser) {
         SellerOrderListResponse sellerOrderListResponse = orderService.getSellerOrderList(currentUser.userId());
         return ApiResponse.ok(sellerOrderListResponse);
@@ -80,4 +74,8 @@ public class OrderController {
         return ApiResponse.ok(new OrderDeleteResponse(orderNumber, "성공적으로 삭제되었습니다."));
     }
 
+    public OrderController(OrderService orderService, PaymentService paymentService) {
+        this.orderService = orderService;
+        this.paymentService = paymentService;
+    }
 }

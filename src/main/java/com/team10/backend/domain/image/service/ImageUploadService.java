@@ -5,8 +5,6 @@ import com.team10.backend.domain.image.dto.PresignedUrlRequest;
 import com.team10.backend.domain.image.dto.PresignedUrlResponse;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -29,9 +27,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+//import lombok.extern.slf4j.Slf4j;
+
 @Service
-@RequiredArgsConstructor
-@Slf4j
+//@Slf4j
 public class ImageUploadService {
 
     private static final Duration PRESIGNED_URL_DURATION = Duration.ofMinutes(5);
@@ -70,7 +69,7 @@ public class ImageUploadService {
         try {
             s3Client.putObject(request, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
         } catch (IOException | SdkException e) {
-            log.error("S3 image upload failed. bucket={}, key={}, reason={}", bucketName, key, e.getMessage(), e);
+//            log.error("S3 image upload failed. bucket={}, key={}, reason={}", bucketName, key, e.getMessage(), e);
             throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED);
         }
 
@@ -127,7 +126,7 @@ public class ImageUploadService {
         try {
             s3Client.deleteObject(request);
         } catch (SdkException e) {
-            log.error("S3 image delete failed. bucket={}, key={}, reason={}", bucketName, key, e.getMessage(), e);
+//            log.error("S3 image delete failed. bucket={}, key={}, reason={}", bucketName, key, e.getMessage(), e);
             throw new BusinessException(ErrorCode.FILE_DELETE_FAILED);
         }
     }
@@ -181,7 +180,7 @@ public class ImageUploadService {
         }
     }
 
-    private void validateImageUrls(List<String> imageUrls){
+    private void validateImageUrls(List<String> imageUrls) {
         if (imageUrls == null || imageUrls.isEmpty()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "삭제할 이미지가 없습니다.");
         }
@@ -260,5 +259,10 @@ public class ImageUploadService {
     // S3에 저장된 object key를 기반으로 클라이언트가 사용할 imageUrl을 만든다.
     private String createImageUrl(String key) {
         return "https://" + bucket.trim() + ".s3." + region.trim() + ".amazonaws.com/" + key;
+    }
+
+    public ImageUploadService(S3Client s3Client, S3Presigner s3Presigner) {
+        this.s3Client = s3Client;
+        this.s3Presigner = s3Presigner;
     }
 }

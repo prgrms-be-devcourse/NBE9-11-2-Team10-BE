@@ -6,21 +6,12 @@ import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.global.entity.BaseEntity;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "products")
-@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Product extends BaseEntity {
 
@@ -141,5 +132,37 @@ public class Product extends BaseEntity {
         if (quantity <= 0) {
             throw new BusinessException(ErrorCode.INVALID_STOCK_QUANTITY);
         }
+    }
+
+    public User getUser() {
+        return this.user;
+    }
+
+    public ProductType getType() {
+        return this.type;
+    }
+
+    public String getProductName() {
+        return this.productName;
+    }
+
+    public String getDescription() {
+        return this.description;
+    }
+
+    public int getPrice() {
+        return this.price;
+    }
+
+    public int getStock() {
+        return this.stock;
+    }
+
+    public String getImageUrl() {
+        return this.imageUrl;
+    }
+
+    public ProductStatus getStatus() {
+        return this.status;
     }
 }

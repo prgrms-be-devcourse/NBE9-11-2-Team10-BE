@@ -7,7 +7,6 @@ import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
 import com.team10.backend.global.security.TokenProvider;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -16,7 +15,6 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 public class RefreshTokenService {
 
     private final RefreshTokenRepository refreshTokenRepository;
@@ -44,7 +42,7 @@ public class RefreshTokenService {
     }
 
     private RefreshToken validateRefreshToken(String token) {
-        if(!StringUtils.hasText(token)) {
+        if (!StringUtils.hasText(token)) {
             throw new BusinessException(ErrorCode.MISSING_REFRESH_TOKEN);
         }
 
@@ -52,7 +50,7 @@ public class RefreshTokenService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN));
 
         // 로그아웃 상태 || 이미 사용한 토큰 || 만료일이 지난 토큰
-        if(refreshToken.isRevoked() || refreshToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+        if (refreshToken.isRevoked() || refreshToken.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
 
@@ -67,4 +65,8 @@ public class RefreshTokenService {
         refreshTokenRepository.findByToken(token).ifPresent(RefreshToken::revoke);
     }
 
+    public RefreshTokenService(RefreshTokenRepository refreshTokenRepository, TokenProvider tokenProvider) {
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.tokenProvider = tokenProvider;
+    }
 }

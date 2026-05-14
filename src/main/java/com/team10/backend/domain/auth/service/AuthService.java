@@ -1,11 +1,6 @@
 package com.team10.backend.domain.auth.service;
 
-import com.team10.backend.domain.auth.dto.AuthRegisterRequest;
-import com.team10.backend.domain.auth.dto.AuthRegisterResponse;
-import com.team10.backend.domain.auth.dto.DuplicateCheckResponse;
-import com.team10.backend.domain.auth.dto.LoginRequest;
-import com.team10.backend.domain.auth.dto.LoginResponse;
-import com.team10.backend.domain.auth.dto.LoginResult;
+import com.team10.backend.domain.auth.dto.*;
 import com.team10.backend.domain.user.entity.SellerInfo;
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.domain.user.enums.DuplicateType;
@@ -14,7 +9,6 @@ import com.team10.backend.domain.user.repository.UserRepository;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
 import com.team10.backend.global.security.TokenProvider;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +18,6 @@ import static com.team10.backend.global.exception.ErrorCode.INVALID_INPUT;
 import static com.team10.backend.global.exception.ErrorCode.LOGIN_FAILED;
 
 @Service
-@RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -42,7 +35,7 @@ public class AuthService {
 
         User user = User.create(request, encodedPassword, role);
 
-        if(role == Role.SELLER) {
+        if (role == Role.SELLER) {
             SellerInfo sellerInfo = new SellerInfo();
             user.attachSellerInfo(sellerInfo);
         }
@@ -53,10 +46,10 @@ public class AuthService {
     }
 
     private void validateDuplicateUser(AuthRegisterRequest request) {
-        if(userRepository.existsByEmail(request.email())) {
+        if (userRepository.existsByEmail(request.email())) {
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
-        if(userRepository.existsByNickname(request.nickname())) {
+        if (userRepository.existsByNickname(request.nickname())) {
             throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
         }
     }
@@ -87,11 +80,17 @@ public class AuthService {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new BusinessException(LOGIN_FAILED));
 
-        if(!passwordEncoder.matches(request.password(), user.getPassword())) {
+        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new BusinessException(LOGIN_FAILED);
         }
 
         return user;
     }
 
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, TokenProvider tokenProvider, RefreshTokenService refreshTokenService) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.tokenProvider = tokenProvider;
+        this.refreshTokenService = refreshTokenService;
+    }
 }

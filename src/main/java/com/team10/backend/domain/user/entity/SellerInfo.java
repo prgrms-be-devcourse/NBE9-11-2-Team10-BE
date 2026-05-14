@@ -1,19 +1,10 @@
 package com.team10.backend.domain.user.entity;
 
 import com.team10.backend.global.entity.BaseEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "seller_info")
-@Getter
-@NoArgsConstructor
 public class SellerInfo extends BaseEntity {
 
     @OneToOne(fetch = FetchType.LAZY)
@@ -35,4 +26,18 @@ public class SellerInfo extends BaseEntity {
         this.businessNumber = businessNumber;
     }
 
+    public User getUser() {
+        return this.user;
+    }
+
+    public String getBio() {
+        return this.bio;
+    }
+
+    public String getBusinessNumber() {
+        return this.businessNumber;
+    }
+
+    public SellerInfo() {
+    }
 }

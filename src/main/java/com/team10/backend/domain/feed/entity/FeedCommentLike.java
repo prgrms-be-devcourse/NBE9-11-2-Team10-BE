@@ -2,18 +2,9 @@ package com.team10.backend.domain.feed.entity;
 
 import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.global.entity.BaseEntity;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.*;
 
 @Entity
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Getter
 @Table(name = "feed_comment_likes")
 public class FeedCommentLike extends BaseEntity {
 
@@ -28,5 +19,16 @@ public class FeedCommentLike extends BaseEntity {
     public FeedCommentLike(FeedComment feedComment, User user) {
         this.feedComment = feedComment;
         this.user = user;
+    }
+
+    public FeedComment getFeedComment() {
+        return this.feedComment;
+    }
+
+    public User getUser() {
+        return this.user;
+    }
+
+    protected FeedCommentLike() {
     }
 }

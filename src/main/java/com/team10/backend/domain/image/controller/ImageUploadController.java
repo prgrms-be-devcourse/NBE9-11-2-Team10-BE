@@ -8,21 +8,14 @@ import com.team10.backend.global.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/api/v1/images")
 @Tag(name = "이미지", description = "이미지 업로드 API")
 public class ImageUploadController {
@@ -48,7 +41,7 @@ public class ImageUploadController {
     ) {
         List<ImageUploadResponse> response =
                 imageUploadService.uploadMultiple(files, directory);
-        
+
         return ApiResponse.ok(response);
     }
 
@@ -60,4 +53,7 @@ public class ImageUploadController {
         return ApiResponse.ok(imageUploadService.createPresignedUrl(request));
     }
 
+    public ImageUploadController(ImageUploadService imageUploadService) {
+        this.imageUploadService = imageUploadService;
+    }
 }

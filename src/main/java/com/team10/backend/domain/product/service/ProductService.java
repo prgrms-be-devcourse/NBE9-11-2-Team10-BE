@@ -1,14 +1,7 @@
 package com.team10.backend.domain.product.service;
 
 import com.team10.backend.domain.image.service.ImageUploadService;
-import com.team10.backend.domain.product.dto.ProductCreateRequest;
-import com.team10.backend.domain.product.dto.ProductDetailResponse;
-import com.team10.backend.domain.product.dto.ProductInactiveResponse;
-import com.team10.backend.domain.product.dto.ProductListResponse;
-import com.team10.backend.domain.product.dto.ProductPageResponse;
-import com.team10.backend.domain.product.dto.ProductStockRequest;
-import com.team10.backend.domain.product.dto.ProductStockResponse;
-import com.team10.backend.domain.product.dto.ProductUpdateRequest;
+import com.team10.backend.domain.product.dto.*;
 import com.team10.backend.domain.product.entity.Product;
 import com.team10.backend.domain.product.enums.ProductStatus;
 import com.team10.backend.domain.product.enums.ProductType;
@@ -18,7 +11,6 @@ import com.team10.backend.domain.user.repository.UserRepository;
 import com.team10.backend.global.exception.BusinessException;
 import com.team10.backend.global.exception.ErrorCode;
 import jakarta.persistence.criteria.Predicate;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -32,7 +24,6 @@ import java.util.List;
 import java.util.Objects;
 
 @Service
-@RequiredArgsConstructor
 public class ProductService {
 
     private final UserRepository userRepository;
@@ -187,5 +178,11 @@ public class ProductService {
         }
 
         return product;
+    }
+
+    public ProductService(UserRepository userRepository, ProductRepository productRepository, ImageUploadService imageUploadService) {
+        this.userRepository = userRepository;
+        this.productRepository = productRepository;
+        this.imageUploadService = imageUploadService;
     }
 }
