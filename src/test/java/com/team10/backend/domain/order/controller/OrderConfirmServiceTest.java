@@ -4,7 +4,7 @@ import com.team10.backend.domain.order.dto.confirm.ConfirmRequest;
 import com.team10.backend.domain.order.dto.confirm.TossConfirmResponse;
 import com.team10.backend.domain.order.service.OrderConfirmService;
 import com.team10.backend.global.exception.BusinessException;
-import com.team10.backend.global.exception.ErrorCode;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.client.HttpClientErrorException;
@@ -21,7 +22,6 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.nio.charset.StandardCharsets;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -37,12 +37,57 @@ class OrderConfirmServiceTest {
     @MockitoBean
     private RestTemplate restTemplate; // 서비스 내부에서 사용하는 RestTemplate을 가로챔
 
-    @ParameterizedTest
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void setUp() {
+        cleanupDatabase();
+
+        /// 1. 기본 유저 세팅
+        insertUser(1L, "buyer@test.com", "홍길동", "nickname1", "BUYER");   // 구매자
+        insertOrder(500L, 1L, "ORD-SUCCESS-100", 15000, "2026-04-29 10:00:00");
+    }
+    private void cleanupDatabase() {
+        // 1. 가장 하위 자식 테이블부터 삭제
+//        jdbcTemplate.update("DELETE FROM payments2");
+//        jdbcTemplate.update("DELETE FROM orders");
+//        jdbcTemplate.update("DELETE FROM users");
+
+        jdbcTemplate.update("DELETE FROM payments");
+        jdbcTemplate.update("DELETE FROM products");
+        jdbcTemplate.update("DELETE FROM orders");
+        jdbcTemplate.update("DELETE FROM users");
+    }
+
+    private void insertUser(Long id, String email, String name, String nickname, String role) {
+        jdbcTemplate.update(
+                "INSERT INTO users (id, email, password, name, nickname, phone_number, address, user_status, role, created_at, updated_at) " +
+                        "VALUES (?, ?, '1234', ?, ?, '010-0000-0000', '주소', 'ACTIVE', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                id, email, name,nickname, role
+        );
+    }
+    private void insertOrder(Long id, Long userId, String orderNum, int amount, String date) {
+        jdbcTemplate.update(
+                "INSERT INTO orders (id, user_id, order_number, total_amount, status, is_deleted, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                id,
+                userId,
+                orderNum,
+                amount,
+                "PENDING", // status 기본값 (Enum의 문자열 값)
+                0,     // is_deleted 기본값
+                date,
+                date
+        );
+    }
+
+        @ParameterizedTest
     @ValueSource(strings = {"REJECT_ACCOUNT_PAYMENT", "REJECT_CARD_PAYMENT", "REJECT_CARD_COMPANY", "FORBIDDEN_REQUEST", "INVALID_PASSWORD"})
     @DisplayName("403 Forbidden 관련 모든 에러 케이스 검증")
     void confirmPayment_fail_forbiddenGroup2(String errorCode) {
         // 1. Given: RestTemplate이 HttpClientErrorException(403)을 던지도록 설정
-        String uniqueOrderId = "order_" + UUID.randomUUID().toString().substring(0, 8);
+        String uniqueOrderId = "ORD-SUCCESS-100";
         ConfirmRequest request = new ConfirmRequest("test_key", uniqueOrderId, 5000L);
 
         // Toss 에러 응답 바디 시뮬레이션 (ErrorCode.name()이 포함되도록)
@@ -82,7 +127,7 @@ class OrderConfirmServiceTest {
     @DisplayName("404 Not Found 관련 모든 에러 케이스 검증")
     void confirmPayment_fail_notFoundGroup(String errorCode) {
         // 1. Given: RestTemplate이 HttpClientErrorException(404)을 던지도록 설정
-        String uniqueOrderId = "order_" + UUID.randomUUID().toString().substring(0, 8);
+        String uniqueOrderId = "ORD-SUCCESS-100";
         ConfirmRequest request = new ConfirmRequest("test_key", uniqueOrderId, 5000L);
 
         // Toss 에러 응답 바디 시뮬레이션
@@ -133,7 +178,7 @@ class OrderConfirmServiceTest {
     @DisplayName("400 Bad Request 관련 모든 에러 케이스 검증")
     void confirmPayment_fail_badRequestGroup(String errorCode) {
         // 1. Given: RestTemplate이 HttpClientErrorException(400)을 던지도록 설정
-        String uniqueOrderId = "order_" + UUID.randomUUID().toString().substring(0, 8);
+        String uniqueOrderId = "ORD-SUCCESS-100";
         ConfirmRequest request = new ConfirmRequest("test_key", uniqueOrderId, 5000L);
 
         // Toss 에러 응답 바디 시뮬레이션 (ErrorCode 포함)
@@ -177,7 +222,7 @@ class OrderConfirmServiceTest {
     @DisplayName("500 Server Error 관련 모든 에러 케이스 검증")
     void confirmPayment_fail_serverErrorGroup(String errorCode) {
         // 1. Given: RestTemplate이 HttpServerErrorException(500)을 던지도록 설정
-        String uniqueOrderId = "order_" + UUID.randomUUID().toString().substring(0, 8);
+        String uniqueOrderId = "ORD-SUCCESS-100";
         ConfirmRequest request = new ConfirmRequest("test_key", uniqueOrderId, 5000L);
 
         // Toss 에러 응답 바디 시뮬레이션
@@ -217,7 +262,7 @@ class OrderConfirmServiceTest {
     @DisplayName("네트워크 에러 발생 시 3번 재시도 후 Recover가 실행되는지 테스트")
     void retry_three_times_and_recover() {
         // given
-        ConfirmRequest request = new ConfirmRequest("order_123", "key_abc", 5000L);
+        ConfirmRequest request = new ConfirmRequest("order_123", "ORD-SUCCESS-100", 5000L);
 
         // restTemplate이 호출될 때마다 ResourceAccessException을 던지도록 설정
         // (재시도 횟수인 3번만큼 예외를 발생시킴)

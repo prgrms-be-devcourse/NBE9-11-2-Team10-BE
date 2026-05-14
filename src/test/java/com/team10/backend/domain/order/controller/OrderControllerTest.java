@@ -126,9 +126,15 @@ public class OrderControllerTest {
 
     private void insertPayment(Long id, Long orderId, String orderNum, int amount, String status) {
         jdbcTemplate.update(
-                "INSERT INTO payments (id, order_id, order_number, total_amount, status, created_at, updated_at) " +
-                        "VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                id, orderId, orderNum, amount, status
+                "INSERT INTO payments (id, order_id, order_number, total_amount, status, idempotency_key, type, created_at, updated_at) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                id,
+                orderId,
+                orderNum,
+                amount,
+                status,
+                java.util.UUID.randomUUID().toString(), // 1. idempotency_key (필수값 채우기)
+                "PAYMENT"          // 2. type (RequestType enum 값 채우기)
         );
     }
 
@@ -194,6 +200,10 @@ public class OrderControllerTest {
 
         OrderCreateRequest req = new OrderCreateRequest( "서울특별시 강남구 테헤란로", List.of(item1, item2, item3));
 //        System.out.println(orderService.createOrder(req));
+        String requestJson = objectMapper.writeValueAsString(req);
+        System.out.println("========================================");
+        System.out.println("전송되는 JSON: " + requestJson);
+        System.out.println("========================================");
         // When: 호출 (실제 서비스의 createOrder가 실행됨)
         ResultActions resultActions = mvc
                 .perform(
@@ -224,6 +234,10 @@ public class OrderControllerTest {
 
         OrderCreateRequest req = new OrderCreateRequest( "서울특별시 강남구 테헤란로", List.of(item1));
 //        System.out.println(orderService.createOrder(req));
+        String requestJson = objectMapper.writeValueAsString(req);
+        System.out.println("========================================");
+        System.out.println("전송되는 JSON: " + requestJson);
+        System.out.println("========================================");
         // When: 호출 (실제 서비스의 createOrder가 실행됨)
         mvc.perform(post("/api/v1/orders")
                         .with(authentication(getAuthentication(1L, Role.BUYER))) // 함수 사용

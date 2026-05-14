@@ -22,8 +22,6 @@ import com.team10.backend.domain.user.entity.User;
 import com.team10.backend.domain.user.enums.Role;
 import com.team10.backend.domain.user.repository.UserRepository;
 import com.team10.backend.global.exception.BusinessException;
-import com.team10.backend.global.exception.ErrorCode;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,7 +40,7 @@ public class OrderService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final OrderProductRepository orderProductRepository;
-    private final RefundService refundService;
+//    private final RefundService refundService;
 
     public void validateStockAvailability( OrderCreateRequest request) {
         for (OrderCreateRequest.OrderProductReq productReq : request.orderProducts()) {
@@ -239,7 +237,7 @@ public class OrderService {
             // 이 메서드 안에서 예외가 터지면 전체 트랜잭션이 롤백된다.
             // 즉, DB의 주문 삭제도 안 일어나고 재고도 안 바뀐다.
             //환불 승인이 나지 않으면 우리 DB의 is_deleted는 절대 true로 바뀌지 않고 재고도 변하지 않는다.
-            refundService.sendCancelRequest(order.getOrderNumber(),latestPayment.getPaymentKey(), cancelRequest); //환불 로직
+//            refundService.sendCancelRequest(order.getOrderNumber(),latestPayment.getPaymentKey(), cancelRequest); //환불 로직
 
             //todo 재시도 로직은 추후에 고려
         }

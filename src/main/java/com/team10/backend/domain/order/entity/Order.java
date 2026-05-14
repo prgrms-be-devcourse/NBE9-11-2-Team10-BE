@@ -11,7 +11,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
-import org.hibernate.annotations.SoftDelete;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -85,6 +84,7 @@ public class Order extends BaseEntity {
                 .orderNumber(orderNumber)
                 .totalAmount(calculatedTotalAmount) // Payment 설계에 맞게 Long 형변환
                 .status(PaymentStatus.READY)
+                .idempotencyKey(null)//임시로 null
                 .build();
         order.addPayment(initialPayment);
 

@@ -26,7 +26,7 @@ public class PaymentService {
     private final OrderDeliveryRepository orderDeliveryRepository;
     private final OrderConfirmService orderConfirmService; // 외부 API 호출 컴포넌트
 
-    @Transactional
+    @Transactional// 제거
     public TossConfirmResponse confirmPayment(ConfirmRequest request) {
         //todo 유저 검증하는 부분, 해당 유저가 해당 오더 넘버를 가지고 있는게 맞는지
         // 1. 비즈니스 검증: DB의 금액과 요청 금액 비교 , 주문 생성시에
@@ -54,7 +54,7 @@ public class PaymentService {
 
         return response;
     }
-
+    //transactional
     public void statusChangeAfterSuccess(Payment payment, String paymentKey, Order order, OrderDelivery delivery) {
         completePayment(payment, paymentKey);
         updateOrderStatus(order);
